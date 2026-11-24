@@ -1,0 +1,138 @@
+=====================================================================
+ @NOM@ @VERSION@ - reconnaître les oiseaux qui chantent dans vos
+ enregistrements   (English version: see README.txt)
+=====================================================================
+
+@NOM@ est un programme Windows gratuit qui reconnaît les oiseaux dans
+vos enregistrements audio et vidéo grâce à BirdNET, le modèle de
+reconnaissance des chants du Cornell Lab of Ornithology et de
+l'Université technique de Chemnitz. Il a été conçu pour les
+utilisateurs de lecteur d'écran (NVDA, JAWS, Narrateur) et convient
+tout autant à tout le monde.
+
+Tout se passe sur votre ordinateur : rien n'est envoyé sur Internet,
+et aucune connexion n'est nécessaire.
+
+Programme indépendant, sans lien avec l'équipe de BirdNET.
+
+---------------------------------------------------------------------
+ PREMIERS PAS
+---------------------------------------------------------------------
+1. Décompressez l'archive où vous voulez, par exemple dans Documents.
+   Rien à installer. Évitez le dossier « Program Files ».
+
+2. Ouvrez le dossier @EXE@ et lancez  @EXE@.exe
+   La PREMIÈRE fois, Windows peut afficher « Windows a protégé votre
+   ordinateur » (le programme n'est pas signé par un certificat
+   payant) : choisissez « Informations complémentaires », puis
+   « Exécuter quand même ». Le premier démarrage peut aussi prendre
+   jusqu'à une minute.
+
+3. La fenêtre du programme s'ouvre. Mettez vos enregistrements dans le
+   dossier  audio  à côté du programme (sous-dossiers compris), ou
+   ajoutez n'importe quel dossier de l'ordinateur dans la section
+   « Dossiers analysés » de la fenêtre. L'analyse démarre toute seule ;
+   un son annonce quand tous les fichiers sont faits.
+
+4. Dans la liste des enregistrements, « Afficher les espèces » donne
+   les oiseaux entendus, dans l'ordre où on les entend, avec un bouton
+   par passage pour écouter l'extrait autour du chant.
+
+Pour quitter : fermez la fenêtre (Alt+F4) ou utilisez le bouton
+« Quitter l'application ». Si une analyse tourne, le programme demande
+confirmation ; une analyse interrompue reprend au lancement suivant.
+Relancer le programme alors qu'il est ouvert ramène sa fenêtre.
+
+Formats acceptés : wav, flac, mp3, ogg, opus, m4a, aac, aiff, wma, et
+les vidéos mp4, m4v, mov, mkv, avi, webm, wmv, mpg, mpeg, 3gp, mts,
+m2ts (la piste son est extraite automatiquement).
+
+Fichiers stéréo : les canaux gauche et droit sont analysés séparément
+(plus d'espèces trouvées). Fichiers ambisoniques 4 canaux (AmbiX) :
+six « micros virtuels » sont analysés. Dans les deux cas, la direction
+de chaque oiseau est donnée sur un axe gauche-droite (gauche, centre
+gauche, centre, centre droit, droite, plus « au-dessus » en
+ambisonique).
+
+---------------------------------------------------------------------
+ RÉGLAGES (dans la fenêtre)
+---------------------------------------------------------------------
+- Pays : BirdNET ne garde que les espèces plausibles là où vous avez
+  enregistré. Latitude et longitude : le centre du pays par défaut,
+  entrez les vôtres pour affiner.
+- Saison : la date de chaque fichier par défaut, ou un jour et un mois
+  fixés.
+- Langue des noms d'oiseaux : les 35 langues de BirdNET.
+- La fenêtre elle-même suit la langue de Windows (français, anglais,
+  allemand, espagnol, italien ; anglais sinon).
+- Longueur des extraits écoutés : 3, 6, 10 ou 15 secondes.
+
+Les résultats sont rangés dans un petit fichier « nom-du-fichier.birds.json »
+à côté de chaque enregistrement : si vous déplacez un enregistrement,
+déplacez aussi son .birds.json et l'analyse suit.
+
+---------------------------------------------------------------------
+ LECTEURS D'ÉCRAN
+---------------------------------------------------------------------
+La fenêtre affiche une page web : NVDA et JAWS utilisent le mode
+navigation, comme dans un navigateur.
+- Titres : niveau 2 = sections, niveau 3 = enregistrements, niveau 4 =
+  espèces. Une liste de liens en tête des enregistrements mène
+  directement à l'un d'eux.
+- Chaque bouton d'écoute dit tout : « Écouter Merle noir - à 2 min 14 s
+  - 78 % - centre gauche ». Barre d'espace ou Entrée pour écouter.
+- La liste ne se réorganise jamais pendant que vous la lisez.
+
+---------------------------------------------------------------------
+ OÙ SONT MES FICHIERS ?
+---------------------------------------------------------------------
+Tout reste dans le dossier du programme :
+- audio\  ........ vos enregistrements (et leurs résultats .birds.json)
+- data\   ........ réglages, journal (journal.txt), fichiers de travail
+                   et cache de la fenêtre
+Décompressé dans un dossier protégé en écriture, le programme utilise
+%LocalAppData%\@EXE@ à la place.
+
+Pour désinstaller : fermez le programme et supprimez son dossier
+(sortez d'abord vos enregistrements du dossier audio si vous voulez
+les garder). Rien n'est écrit dans le registre ni ailleurs. Les
+dossiers ajoutés dans la fenêtre gardent leurs fichiers .birds.json.
+
+---------------------------------------------------------------------
+ EN CAS DE PROBLÈME
+---------------------------------------------------------------------
+- La fenêtre ne s'ouvre pas mais la page s'ouvre dans votre navigateur :
+  il manque à votre Windows le composant « WebView2 » (toujours présent
+  sous Windows 11 ; installable sous Windows 10 depuis le site de
+  Microsoft). Le programme marche quand même dans le navigateur :
+  le bouton « Quitter l'application » de la page l'arrête.
+- « Le port 8790 est déjà utilisé par un autre programme » : un autre
+  programme utilise le même port réseau sur votre ordinateur ;
+  fermez-le et réessayez.
+- Un antivirus peut ralentir le premier démarrage et la première
+  analyse.
+- En cas de souci, le fichier data\journal.txt raconte ce qui s'est
+  passé : joignez-le à votre message.
+
+---------------------------------------------------------------------
+ LICENCES ET REMERCIEMENTS
+---------------------------------------------------------------------
+- @NOM@ est un logiciel libre sous licence MIT (LICENSE.txt).
+- Reconnaissance des oiseaux : BirdNET GLOBAL 6K V2.4, du K. Lisa Yang
+  Center for Conservation Bioacoustics (Cornell Lab of Ornithology) et
+  de l'Université technique de Chemnitz. Le modèle BirdNET est sous
+  licence CC BY-NC-SA 4.0 : UTILISATION NON COMMERCIALE UNIQUEMENT.
+  C'est pourquoi ce programme peut être partagé librement, mais pas
+  vendu.
+  Kahl, S., Wood, C. M., Eibl, M., & Klinck, H. (2021). BirdNET: A
+  deep learning solution for avian diversity monitoring. Ecological
+  Informatics, 61, 101236.
+- Également inclus : birdnetlib (Joe Weiss), LiteRT (Google), FFmpeg
+  (construction LGPL de BtbN), Python, NumPy, SciPy, pywebview et
+  d'autres. La liste complète, avec le texte de chaque licence, est
+  dans LICENSES.txt.
+- Conçu et écrit par Seb, Chris et Claude (Claude Code d'Anthropic),
+  2026.
+- Contact : sebno42@gmail.com
+- Code source, nouvelles versions et signalement des problèmes :
+  @SOURCES@

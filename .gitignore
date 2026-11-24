@@ -1,0 +1,18 @@
+# Built, downloaded or personal: never in the repository
+exe/venv/
+exe/build/
+exe/dist/
+exe/ffmpeg/
+exe/telechargements/
+exe/*.zip
+*.spec
+*.log
+__pycache__/
+# created when running from source
+audio/
+tmp/
+webview/
+data/
+bin/
+birdnet_config.json
+journal.txt

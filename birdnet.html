@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oiseaux — analyse BirdNET locale</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 60em; margin: 1em auto;
+         padding: 0 1em; line-height: 1.5; }
+  h1 { font-size: 1.5em; }
+  h2 { font-size: 1.2em; margin-top: 1.4em; }
+  h3 { font-size: 1.05em; margin-bottom: 0.2em; }
+  h4 { font-size: 1em; margin: 0.8em 0 0.1em; }
+  nav ul { margin: 0.2em 0 1em; }
+  button { font-size: 1em; padding: 0.35em 0.8em; margin: 0.2em 0.4em 0.2em 0; }
+  select { font-size: 1em; }
+  ul { margin-top: 0.3em; }
+  .resume { color: #333; margin: 0.1em 0 0.3em; }
+  .statut-erreur { color: #a00; }
+  section.fichier { border-top: 1px solid #ccc; padding-top: 0.5em; }
+  #etat { font-weight: bold; }
+  .faible { color: #666; }
+  /* passages : un bouton par ligne, SANS liste a puces (retour NVDA : en
+     mode navigation la fleche s'arretait sur la puce, pas sur le bouton,
+     et la barre d'espace ne lancait rien) */
+  .passages button { display: block; }
+</style>
+</head>
+<body>
+<h1 data-i18n="h1">Analyse BirdNET locale</h1>
+<p><span data-i18n="intro1">Copie tes fichiers audio ou vidéo dans le
+dossier « audio » :</span> <strong id="cheminAudio">…</strong>
+<span data-i18n="intro2">(sous-dossiers compris). La liste complète des
+formats acceptés est dans LISEZMOI.txt. On peut aussi ajouter d'autres
+dossiers à surveiller dans la section « Dossiers analysés » plus bas.
+L'analyse démarre toute seule au bout d'une minute, ou tout de suite avec
+le bouton ci-dessous. Un fichier supprimé voit son analyse retirée
+automatiquement.</span></p>
+
+<h2 data-i18n="hEtat">État</h2>
+<p id="etat" data-i18n="chargement">Chargement…</p>
+<button id="btnScan" data-i18n="btnScan">Rechercher et analyser les nouveaux fichiers</button>
+<button id="btnForce" data-i18n="btnForce">Tout réanalyser</button>
+<button id="btnActualiser" data-i18n="btnActualiser">Actualiser la liste des enregistrements</button>
+<button id="btnQuitter" data-i18n="btnQuitter">Quitter l'application</button>
+
+<h2 data-i18n="hReglages">Réglages d'analyse — communs à TOUS les fichiers</h2>
+<p data-i18n="pReglages">Le lieu et la saison aident BirdNET à ne garder que
+les espèces plausibles. Ces choix s'appliquent à tous les fichiers. Après un
+changement, ils valent pour les prochaines analyses : utiliser « Tout
+réanalyser » pour refaire les analyses existantes avec les nouveaux
+réglages.</p>
+<p>
+  <label><span data-i18n="lblPays">Pays où les enregistrements ont été faits</span>
+    <select id="cfgPays"></select>
+  </label>
+  <span data-i18n="notePays">(pour un grand pays, le centre du pays est utilisé)</span>
+</p>
+<p>
+  <label><span data-i18n="lblLat">Latitude</span>
+    <input id="cfgLat" type="number" step="any" min="-90" max="90"></label>
+  <label><span data-i18n="lblLon">Longitude</span>
+    <input id="cfgLon" type="number" step="any" min="-180" max="180"></label>
+</p>
+<p data-i18n="noteCoords">Par défaut, c'est le centre du pays. Pour affiner,
+entrez les coordonnées de l'endroit où vous enregistrez (une appli de carte
+les donne).</p>
+<p>
+  <label><input type="checkbox" id="cfgAuto" checked>
+    <span data-i18n="lblAuto">Utiliser la date de chaque fichier pour la saison</span></label>
+</p>
+<p>
+  <span data-i18n="lblSinon">Sinon, saison fixée au :</span>
+  <label><span data-i18n="lblJour">jour</span>
+    <input id="cfgJour" type="number" min="1" max="31"></label>
+  <label><span data-i18n="lblMois">mois</span> <select id="cfgMois"></select></label>
+</p>
+<p><button id="btnCfg" data-i18n="btnCfg">Enregistrer les réglages</button>
+  <span id="cfgRetour" role="status"></span></p>
+
+<h2 data-i18n="hDossiers">Dossiers analysés</h2>
+<p data-i18n="pDossiers">Le dossier audio du projet est toujours surveillé.
+On peut ajouter n'importe quel autre dossier du disque : il est analysé
+pareil (sous-dossiers compris) et les résultats .birds.json s'écrivent à
+côté des fichiers audio.</p>
+<ul id="listeDossiers"></ul>
+<p><button id="btnParcourir" data-i18n="btnParcourir">Choisir un dossier à ajouter</button>
+  <span data-i18n="noteParcourir">(ouvre la fenêtre Windows de choix de dossier)</span></p>
+<p>
+  <label><span data-i18n="lblChemin">Ou coller un chemin de dossier</span>
+    <input id="champDossier" type="text" size="45"></label>
+  <button id="btnAjoutDossier" data-i18n="btnAjout">Ajouter ce dossier</button>
+  <span id="dosRetour" role="status"></span>
+</p>
+
+<h2 data-i18n="hAffichage">Affichage</h2>
+<p>
+  <label><span data-i18n="lblLangue">Langue des noms d'oiseaux</span>
+    <select id="selLangue"></select>
+  </label>
+</p>
+<p>
+  <label><input type="checkbox" id="chkFaibles">
+    <span data-i18n="lblFaibles">Afficher aussi les détections faibles (confiance sous 25 %)</span></label>
+</p>
+<p>
+  <label><span data-i18n="lblDuree">Longueur des extraits écoutés</span>
+    <select id="selDuree">
+      <option value="3" data-i18n="sec3">3 secondes (fenêtre BirdNET)</option>
+      <option value="6" selected data-i18n="sec6">6 secondes</option>
+      <option value="10" data-i18n="sec10">10 secondes</option>
+      <option value="15" data-i18n="sec15">15 secondes</option>
+    </select>
+  </label>
+</p>
+
+<p>
+  <button id="btnStop" data-i18n="btnStop">Arrêter la lecture</button>
+</p>
+<p id="lectureEtat" role="status"></p>
+
+<h2 id="titreListe" data-i18n="hListe">Enregistrements</h2>
+<p data-i18n="noteOrdre">Les espèces sont listées dans l'ordre où on les
+entend dans l'enregistrement, pas de la plus sûre à la moins sûre.</p>
+<nav id="sommaire" hidden></nav>
+<div id="fichiers"><p data-i18n="chargement">Chargement…</p></div>
+
+<h2 data-i18n="hJournal">Journal</h2>
+<button id="btnJournal" data-i18n="btnJournalAff">Afficher le journal du serveur</button>
+<pre id="journal" hidden></pre>
+
+<h2 data-i18n="hApropos">À propos</h2>
+<p id="aproposAppli" hidden></p>
+<p data-i18n="aproposBirdnet">L'identification des oiseaux est faite par
+BirdNET (K. Lisa Yang Center for Conservation Bioacoustics du Cornell Lab of
+Ornithology, et Université technique de Chemnitz). Son modèle est sous
+licence CC BY-NC-SA 4.0 : utilisation non commerciale uniquement.</p>
+<p id="aproposLicences" hidden data-i18n="aproposLicences">Les licences de
+tous les composants sont dans le fichier LICENSES.txt du programme.</p>
+<p id="aproposSources" hidden><a id="lienSources" target="_blank"
+rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
+(GitHub)</a></p>
+
+<script>
+"use strict";
+(function () {
+  var labels = {};            // sci -> nom dans la langue choisie
+  var langue = localStorage.getItem("birdnet.langue") || null;
+
+  /* --- Interface dans la langue de l'appareil ---
+     La page est ecrite en francais (textes par defaut + dictionnaire fr pour
+     les chaines construites en JS). TRAD fournit en/de/es/it ; toute autre
+     langue d'appareil retombe sur l'anglais. Les noms d'oiseaux, eux, ont
+     leur propre selecteur (35 langues BirdNET). */
+  var TRAD = {
+  fr: {
+    eAnalyse: "Analyse en cours : {f} — {e} — depuis {t}",
+    eAttenteSuite: " ; {n} en attente",
+    eAttente1: "1 fichier en attente d'analyse.",
+    eAttenteN: "{n} fichiers en attente d'analyse.",
+    eAucune: "Aucune analyse en cours.",
+    eFaits1: "1 analyse terminée depuis le lancement.",
+    eFaitsN: "{n} analyses terminées depuis le lancement.",
+    eActualise: "Actualise la liste pour voir les nouveaux résultats.",
+    eErreurs1: "1 fichier en erreur (détails dans la liste).",
+    eErreursN: "{n} fichiers en erreur (détails dans la liste).",
+    eInjoignable: "Serveur injoignable.",
+    eArrete: "BirdNET est arrêté. Tu peux fermer cet onglet.",
+    confForce: "Tout réanalyser ? Les analyses existantes seront refaites.",
+    confQuit: "Arrêter BirdNET ? La fenêtre de console se fermera toute seule.",
+    sommaireLabel: "Sommaire des enregistrements",
+    sommaireAller: "Aller directement à un enregistrement :",
+    aucunFichier: "Aucun fichier audio dans le dossier audio.",
+    nEsp1: "1 espèce", nEspN: "{n} espèces",
+    nDet1: "1 détection", nDetN: "{n} détections",
+    nCanaux1: "1 canal", nCanauxN: "{n} canaux",
+    prise: "prise du {d}",
+    stEnCours: "en cours d'analyse", stAttente: "en attente",
+    stErreur: "erreur : ", stPasAnalyse: "pas encore analysé",
+    stIllisible: "analyse illisible",
+    btnVoir: "Afficher les espèces", btnMasquer: "Masquer les espèces",
+    btnReanalyser: "Réanalyser ce fichier",
+    aucuneEspece: "Aucune espèce au-dessus du seuil choisi.",
+    faible: " (faible)", incertain: " (incertain)",
+    confMax: "confiance max ",
+    nPassages1: "1 passage", nPassagesN: "{n} passages",
+    deA: "de {a} à {b}",
+    ecouter: "Écouter ", aT: "à ", chantDe: "chant de ",
+    posC: "centre", posCG: "centre gauche", posG: "gauche",
+    posCD: "centre droit", posD: "droite", posH: "au-dessus",
+    uMin: " min ", uS: " s",
+    bloque: "Le navigateur a bloqué le son : presse une touche, par exemple Tab, et la lecture partira toute seule.",
+    lectureImpossible: "Lecture impossible : ",
+    cfgOk: "Réglages enregistrés pour les prochaines analyses. Le bouton « Tout réanalyser » les applique aux fichiers déjà analysés.",
+    erreur: "Erreur : ",
+    dosPrincipal: " — dossier du projet, toujours surveillé",
+    btnRetirer: "Ne plus surveiller ",
+    dosRetire: "Dossier retiré (ses fichiers et leurs analyses restent sur le disque).",
+    dosAjoute: "Dossier ajouté : ses fichiers audio partent en analyse.",
+    dosAnnule: "Choix annulé.",
+    dosFenetre: "Fenêtre de choix ouverte sur le Bureau (faire Alt+Tab si elle n'est pas au premier plan)…",
+    dosColle: "Colle d'abord un chemin de dossier.",
+    dosErr: "Erreur pendant le choix du dossier.",
+    btnJournalAff: "Afficher le journal du serveur",
+    btnJournalMasq: "Masquer le journal du serveur",
+    confQuitAppli: "Quitter l'application ?",
+    aproposAppli: "{nom}, version {version}. Logiciel libre sous licence MIT."
+  },
+  en: {
+    titre: "Birds — local BirdNET analysis",
+    h1: "Local BirdNET analysis",
+    intro1: "Copy your audio or video files into the audio folder:",
+    intro2: "(subfolders included). See readme.txt for the full list of accepted formats. You can also add other folders to watch in the “Analysed folders” section below. Analysis starts by itself within a minute, or right away with the button below. When a file is deleted its analysis is removed automatically.",
+    hEtat: "Status", chargement: "Loading…",
+    btnScan: "Find and analyse new files",
+    btnForce: "Re-analyse everything",
+    btnActualiser: "Refresh the list of recordings",
+    btnQuitter: "Quit the app",
+    hReglages: "Analysis settings — shared by ALL files",
+    pReglages: "Location and season help BirdNET keep only plausible species. These choices apply to all files. After a change they apply to the next analyses: use “Re-analyse everything” to redo existing analyses with the new settings.",
+    lblPays: "Country where the recordings were made",
+    notePays: "(for a large country, its centre is used)",
+    lblLat: "Latitude", lblLon: "Longitude",
+    noteCoords: "By default this is the centre of the country. To refine, enter the coordinates of the place where you record (a map app gives them).",
+    lblAuto: "Use each file's date for the season",
+    lblSinon: "Otherwise, season fixed at:",
+    lblJour: "day", lblMois: "month", btnCfg: "Save settings",
+    cfgOk: "Settings saved for the next analyses. Use the “Re-analyse everything” button to apply them to the files already analysed.",
+    erreur: "Error: ",
+    hDossiers: "Analysed folders",
+    pDossiers: "The project's audio folder is always watched. You can add any other folder on the disk: it is analysed the same way (subfolders included) and the .birds.json results are written next to the audio files.",
+    btnParcourir: "Choose a folder to add",
+    noteParcourir: "(opens the Windows folder picker)",
+    lblChemin: "Or paste a folder path", btnAjout: "Add this folder",
+    dosPrincipal: " — project folder, always watched",
+    btnRetirer: "Stop watching ",
+    dosRetire: "Folder removed (its files and their analyses stay on disk).",
+    dosAjoute: "Folder added: its audio files are queued for analysis.",
+    dosAnnule: "Cancelled.",
+    dosFenetre: "Folder picker opened on the desktop (press Alt+Tab if it is not in front)…",
+    dosColle: "Paste a folder path first.",
+    dosErr: "Error while choosing the folder.",
+    hAffichage: "Display", lblLangue: "Language of bird names",
+    lblFaibles: "Also show weak detections (confidence below 25%)",
+    lblDuree: "Length of the played excerpts",
+    sec3: "3 seconds (BirdNET window)", sec6: "6 seconds",
+    sec10: "10 seconds", sec15: "15 seconds",
+    btnStop: "Stop playback",
+    bloque: "The browser blocked the sound: press a key, Tab for example, and playback will start by itself.",
+    lectureImpossible: "Playback failed: ",
+    hListe: "Recordings", sommaireLabel: "Summary of recordings",
+    sommaireAller: "Jump straight to a recording:",
+    noteOrdre: "Species are listed in the order they are heard in the recording, not from most to least confident.",
+    aucunFichier: "No audio file in the audio folder.",
+    nEsp1: "1 species", nEspN: "{n} species",
+    nDet1: "1 detection", nDetN: "{n} detections",
+    nCanaux1: "1 channel", nCanauxN: "{n} channels",
+    prise: "recorded on {d}",
+    stEnCours: "being analysed", stAttente: "waiting",
+    stErreur: "error: ", stPasAnalyse: "not analysed yet",
+    stIllisible: "unreadable analysis",
+    btnVoir: "Show species", btnMasquer: "Hide species",
+    btnReanalyser: "Re-analyse this file",
+    aucuneEspece: "No species above the chosen threshold.",
+    faible: " (weak)", incertain: " (uncertain)",
+    confMax: "max confidence ",
+    nPassages1: "1 passage", nPassagesN: "{n} passages",
+    deA: "from {a} to {b}",
+    ecouter: "Play ", aT: "at ", chantDe: "song of ",
+    posC: "centre", posCG: "centre left", posG: "left",
+    posCD: "centre right", posD: "right", posH: "above",
+    uMin: " min ", uS: " s",
+    eAnalyse: "Analysing: {f} — {e} — for {t}",
+    eAttenteSuite: "; {n} waiting",
+    eAttente1: "1 file waiting for analysis.",
+    eAttenteN: "{n} files waiting for analysis.",
+    eAucune: "No analysis running.",
+    eFaits1: "1 analysis done since startup.",
+    eFaitsN: "{n} analyses done since startup.",
+    eActualise: "Refresh the list to see the new results.",
+    eErreurs1: "1 file in error (details in the list).",
+    eErreursN: "{n} files in error (details in the list).",
+    eInjoignable: "Server unreachable.",
+    eArrete: "BirdNET has stopped. You can close this tab.",
+    confForce: "Re-analyse everything? Existing analyses will be redone.",
+    confQuit: "Stop BirdNET? The console window will close by itself.",
+    btnJournalAff: "Show the server log",
+    btnJournalMasq: "Hide the server log",
+    hJournal: "Log",
+    confQuitAppli: "Quit the application?",
+    hApropos: "About",
+    aproposAppli: "{nom}, version {version}. Free software under the MIT licence.",
+    aproposBirdnet: "Birds are identified by BirdNET (K. Lisa Yang Center for Conservation Bioacoustics at the Cornell Lab of Ornithology, and Chemnitz University of Technology). Its model is licensed CC BY-NC-SA 4.0: non-commercial use only.",
+    aproposLicences: "The licences of all components are in the program's LICENSES.txt file.",
+    lienSources: "Source code and new versions (GitHub)"
+  },
+  de: {
+    titre: "Vögel — lokale BirdNET-Analyse",
+    h1: "Lokale BirdNET-Analyse",
+    intro1: "Kopiere deine Audio- oder Videodateien in den Ordner „audio“:",
+    intro2: "(Unterordner werden berücksichtigt). Die vollständige Liste der unterstützten Formate steht in readme.txt. Weitere Ordner lassen sich unten im Abschnitt „Analysierte Ordner“ hinzufügen. Die Analyse startet von selbst innerhalb einer Minute, oder sofort mit der Schaltfläche unten. Wird eine Datei gelöscht, wird ihre Analyse automatisch entfernt.",
+    hEtat: "Status", chargement: "Laden…",
+    btnScan: "Neue Dateien suchen und analysieren",
+    btnForce: "Alles neu analysieren",
+    btnActualiser: "Liste der Aufnahmen aktualisieren",
+    btnQuitter: "Anwendung beenden",
+    hReglages: "Analyse-Einstellungen — für ALLE Dateien",
+    pReglages: "Ort und Jahreszeit helfen BirdNET, nur plausible Arten zu behalten. Diese Einstellungen gelten für alle Dateien. Nach einer Änderung gelten sie für die nächsten Analysen: „Alles neu analysieren“ wiederholt vorhandene Analysen mit den neuen Einstellungen.",
+    lblPays: "Land, in dem die Aufnahmen gemacht wurden",
+    notePays: "(bei einem großen Land wird sein Mittelpunkt verwendet)",
+    lblLat: "Breitengrad", lblLon: "Längengrad",
+    noteCoords: "Voreingestellt ist der Mittelpunkt des Landes. Zum Verfeinern geben Sie die Koordinaten Ihres Aufnahmeorts ein (eine Karten-App liefert sie).",
+    lblAuto: "Datum jeder Datei für die Jahreszeit verwenden",
+    lblSinon: "Sonst Jahreszeit festgelegt auf:",
+    lblJour: "Tag", lblMois: "Monat", btnCfg: "Einstellungen speichern",
+    cfgOk: "Einstellungen für die nächsten Analysen gespeichert. „Alles neu analysieren“ wendet sie auf die bereits analysierten Dateien an.",
+    erreur: "Fehler: ",
+    hDossiers: "Analysierte Ordner",
+    pDossiers: "Der audio-Ordner des Projekts wird immer überwacht. Jeder andere Ordner der Festplatte kann hinzugefügt werden: er wird genauso analysiert (mit Unterordnern), und die .birds.json-Ergebnisse werden neben die Audiodateien geschrieben.",
+    btnParcourir: "Ordner zum Hinzufügen auswählen",
+    noteParcourir: "(öffnet den Windows-Ordnerdialog)",
+    lblChemin: "Oder einen Ordnerpfad einfügen",
+    btnAjout: "Diesen Ordner hinzufügen",
+    dosPrincipal: " — Projektordner, immer überwacht",
+    btnRetirer: "Nicht mehr überwachen: ",
+    dosRetire: "Ordner entfernt (seine Dateien und Analysen bleiben auf der Festplatte).",
+    dosAjoute: "Ordner hinzugefügt: seine Audiodateien werden analysiert.",
+    dosAnnule: "Abgebrochen.",
+    dosFenetre: "Ordnerdialog auf dem Desktop geöffnet (Alt+Tab, falls er nicht im Vordergrund ist)…",
+    dosColle: "Bitte zuerst einen Ordnerpfad einfügen.",
+    dosErr: "Fehler bei der Ordnerauswahl.",
+    hAffichage: "Anzeige", lblLangue: "Sprache der Vogelnamen",
+    lblFaibles: "Auch schwache Erkennungen anzeigen (Konfidenz unter 25 %)",
+    lblDuree: "Länge der abgespielten Ausschnitte",
+    sec3: "3 Sekunden (BirdNET-Fenster)", sec6: "6 Sekunden",
+    sec10: "10 Sekunden", sec15: "15 Sekunden",
+    btnStop: "Wiedergabe stoppen",
+    bloque: "Der Browser hat den Ton blockiert: eine Taste drücken (z. B. Tab), die Wiedergabe startet dann von selbst.",
+    lectureImpossible: "Wiedergabe nicht möglich: ",
+    hListe: "Aufnahmen", sommaireLabel: "Übersicht der Aufnahmen",
+    sommaireAller: "Direkt zu einer Aufnahme springen:",
+    noteOrdre: "Die Arten sind in der Reihenfolge aufgeführt, in der sie in der Aufnahme zu hören sind, nicht nach Konfidenz.",
+    aucunFichier: "Keine Audiodatei im audio-Ordner.",
+    nEsp1: "1 Art", nEspN: "{n} Arten",
+    nDet1: "1 Erkennung", nDetN: "{n} Erkennungen",
+    nCanaux1: "1 Kanal", nCanauxN: "{n} Kanäle",
+    prise: "aufgenommen am {d}",
+    stEnCours: "wird analysiert", stAttente: "wartet",
+    stErreur: "Fehler: ", stPasAnalyse: "noch nicht analysiert",
+    stIllisible: "Ergebnis unlesbar",
+    btnVoir: "Arten anzeigen", btnMasquer: "Arten ausblenden",
+    btnReanalyser: "Diese Datei neu analysieren",
+    aucuneEspece: "Keine Art über der gewählten Schwelle.",
+    faible: " (schwach)", incertain: " (unsicher)",
+    confMax: "max. Konfidenz ",
+    nPassages1: "1 Passage", nPassagesN: "{n} Passagen",
+    deA: "von {a} bis {b}",
+    ecouter: "Anhören ", aT: "bei ", chantDe: "Gesang von ",
+    posC: "Mitte", posCG: "halb links", posG: "links",
+    posCD: "halb rechts", posD: "rechts", posH: "oben",
+    uMin: " min ", uS: " s",
+    eAnalyse: "Analyse läuft: {f} — {e} — seit {t}",
+    eAttenteSuite: "; {n} wartend",
+    eAttente1: "1 Datei wartet auf Analyse.",
+    eAttenteN: "{n} Dateien warten auf Analyse.",
+    eAucune: "Keine Analyse läuft.",
+    eFaits1: "1 Analyse seit dem Start abgeschlossen.",
+    eFaitsN: "{n} Analysen seit dem Start abgeschlossen.",
+    eActualise: "Liste aktualisieren, um die neuen Ergebnisse zu sehen.",
+    eErreurs1: "1 Datei mit Fehler (Details in der Liste).",
+    eErreursN: "{n} Dateien mit Fehler (Details in der Liste).",
+    eInjoignable: "Server nicht erreichbar.",
+    eArrete: "BirdNET ist beendet. Dieser Tab kann geschlossen werden.",
+    confForce: "Alles neu analysieren? Vorhandene Analysen werden wiederholt.",
+    confQuit: "BirdNET beenden? Das Konsolenfenster schließt sich von selbst.",
+    btnJournalAff: "Serverprotokoll anzeigen",
+    btnJournalMasq: "Serverprotokoll ausblenden",
+    hJournal: "Protokoll",
+    confQuitAppli: "Anwendung beenden?",
+    hApropos: "Über",
+    aproposAppli: "{nom}, Version {version}. Freie Software unter der MIT-Lizenz.",
+    aproposBirdnet: "Die Vögel werden von BirdNET bestimmt (K. Lisa Yang Center for Conservation Bioacoustics am Cornell Lab of Ornithology und Technische Universität Chemnitz). Das Modell steht unter der Lizenz CC BY-NC-SA 4.0: nur nicht-kommerzielle Nutzung.",
+    aproposLicences: "Die Lizenzen aller Bestandteile stehen in der Datei LICENSES.txt des Programms.",
+    lienSources: "Quellcode und neue Versionen (GitHub)"
+  },
+  es: {
+    titre: "Aves — análisis BirdNET local",
+    h1: "Análisis BirdNET local",
+    intro1: "Copia tus archivos de audio o vídeo en la carpeta «audio»:",
+    intro2: "(subcarpetas incluidas). La lista completa de formatos aceptados está en readme.txt. También puedes añadir otras carpetas a vigilar en la sección «Carpetas analizadas» más abajo. El análisis empieza solo en un minuto, o inmediatamente con el botón de abajo. Si se borra un archivo, su análisis se retira automáticamente.",
+    hEtat: "Estado", chargement: "Cargando…",
+    btnScan: "Buscar y analizar los archivos nuevos",
+    btnForce: "Reanalizar todo",
+    btnActualiser: "Actualizar la lista de grabaciones",
+    btnQuitter: "Salir de la aplicación",
+    hReglages: "Ajustes de análisis — comunes a TODOS los archivos",
+    pReglages: "El lugar y la estación ayudan a BirdNET a conservar solo las especies plausibles. Estas opciones se aplican a todos los archivos. Tras un cambio, valen para los próximos análisis: usa «Reanalizar todo» para rehacer los análisis existentes con los nuevos ajustes.",
+    lblPays: "País donde se hicieron las grabaciones",
+    notePays: "(para un país grande se usa su centro)",
+    lblLat: "Latitud", lblLon: "Longitud",
+    noteCoords: "Por defecto es el centro del país. Para afinar, introduzca las coordenadas del lugar donde graba (una aplicación de mapas las da).",
+    lblAuto: "Usar la fecha de cada archivo para la estación",
+    lblSinon: "Si no, estación fijada al:",
+    lblJour: "día", lblMois: "mes", btnCfg: "Guardar los ajustes",
+    cfgOk: "Ajustes guardados para los próximos análisis. El botón «Reanalizar todo» los aplica a los archivos ya analizados.",
+    erreur: "Error: ",
+    hDossiers: "Carpetas analizadas",
+    pDossiers: "La carpeta audio del proyecto siempre está vigilada. Puedes añadir cualquier otra carpeta del disco: se analiza igual (subcarpetas incluidas) y los resultados .birds.json se escriben junto a los archivos de audio.",
+    btnParcourir: "Elegir una carpeta para añadir",
+    noteParcourir: "(abre el cuadro de Windows de elección de carpeta)",
+    lblChemin: "O pegar la ruta de una carpeta",
+    btnAjout: "Añadir esta carpeta",
+    dosPrincipal: " — carpeta del proyecto, siempre vigilada",
+    btnRetirer: "Dejar de vigilar ",
+    dosRetire: "Carpeta retirada (sus archivos y análisis quedan en el disco).",
+    dosAjoute: "Carpeta añadida: sus archivos de audio pasan a analizarse.",
+    dosAnnule: "Cancelado.",
+    dosFenetre: "Cuadro de elección abierto en el escritorio (Alt+Tab si no está delante)…",
+    dosColle: "Pega primero la ruta de una carpeta.",
+    dosErr: "Error al elegir la carpeta.",
+    hAffichage: "Visualización", lblLangue: "Idioma de los nombres de aves",
+    lblFaibles: "Mostrar también las detecciones débiles (confianza inferior al 25 %)",
+    lblDuree: "Duración de los extractos escuchados",
+    sec3: "3 segundos (ventana BirdNET)", sec6: "6 segundos",
+    sec10: "10 segundos", sec15: "15 segundos",
+    btnStop: "Detener la lectura",
+    bloque: "El navegador bloqueó el sonido: pulsa una tecla, por ejemplo Tab, y la lectura empezará sola.",
+    lectureImpossible: "Lectura imposible: ",
+    hListe: "Grabaciones", sommaireLabel: "Resumen de las grabaciones",
+    sommaireAller: "Ir directamente a una grabación:",
+    noteOrdre: "Las especies se listan en el orden en que se oyen en la grabación, no de mayor a menor confianza.",
+    aucunFichier: "Ningún archivo de audio en la carpeta audio.",
+    nEsp1: "1 especie", nEspN: "{n} especies",
+    nDet1: "1 detección", nDetN: "{n} detecciones",
+    nCanaux1: "1 canal", nCanauxN: "{n} canales",
+    prise: "grabado el {d}",
+    stEnCours: "analizándose", stAttente: "en espera",
+    stErreur: "error: ", stPasAnalyse: "aún sin analizar",
+    stIllisible: "resultado ilegible",
+    btnVoir: "Mostrar las especies", btnMasquer: "Ocultar las especies",
+    btnReanalyser: "Reanalizar este archivo",
+    aucuneEspece: "Ninguna especie por encima del umbral elegido.",
+    faible: " (débil)", incertain: " (incierto)",
+    confMax: "confianza máx. ",
+    nPassages1: "1 pasaje", nPassagesN: "{n} pasajes",
+    deA: "de {a} a {b}",
+    ecouter: "Escuchar ", aT: "a ", chantDe: "canto de ",
+    posC: "centro", posCG: "centro-izquierda", posG: "izquierda",
+    posCD: "centro-derecha", posD: "derecha", posH: "arriba",
+    uMin: " min ", uS: " s",
+    eAnalyse: "Análisis en curso: {f} — {e} — desde hace {t}",
+    eAttenteSuite: "; {n} en espera",
+    eAttente1: "1 archivo en espera de análisis.",
+    eAttenteN: "{n} archivos en espera de análisis.",
+    eAucune: "Ningún análisis en curso.",
+    eFaits1: "1 análisis terminado desde el inicio.",
+    eFaitsN: "{n} análisis terminados desde el inicio.",
+    eActualise: "Actualiza la lista para ver los nuevos resultados.",
+    eErreurs1: "1 archivo con error (detalles en la lista).",
+    eErreursN: "{n} archivos con error (detalles en la lista).",
+    eInjoignable: "Servidor inaccesible.",
+    eArrete: "BirdNET está detenido. Puedes cerrar esta pestaña.",
+    confForce: "¿Reanalizar todo? Los análisis existentes se rehacerán.",
+    confQuit: "¿Detener BirdNET? La ventana de consola se cerrará sola.",
+    btnJournalAff: "Mostrar el registro del servidor",
+    btnJournalMasq: "Ocultar el registro del servidor",
+    hJournal: "Registro",
+    confQuitAppli: "¿Salir de la aplicación?",
+    hApropos: "Acerca de",
+    aproposAppli: "{nom}, versión {version}. Software libre con licencia MIT.",
+    aproposBirdnet: "Las aves las identifica BirdNET (K. Lisa Yang Center for Conservation Bioacoustics del Cornell Lab of Ornithology, y Universidad Tecnológica de Chemnitz). Su modelo tiene licencia CC BY-NC-SA 4.0: solo uso no comercial.",
+    aproposLicences: "Las licencias de todos los componentes están en el archivo LICENSES.txt del programa.",
+    lienSources: "Código fuente y nuevas versiones (GitHub)"
+  },
+  it: {
+    titre: "Uccelli — analisi BirdNET locale",
+    h1: "Analisi BirdNET locale",
+    intro1: "Copia i tuoi file audio o video nella cartella «audio»:",
+    intro2: "(sottocartelle comprese). L'elenco completo dei formati accettati è in readme.txt. Puoi anche aggiungere altre cartelle da sorvegliare nella sezione «Cartelle analizzate» più in basso. L'analisi parte da sola entro un minuto, o subito con il pulsante qui sotto. Se un file viene eliminato, la sua analisi è rimossa automaticamente.",
+    hEtat: "Stato", chargement: "Caricamento…",
+    btnScan: "Cerca e analizza i nuovi file",
+    btnForce: "Rianalizza tutto",
+    btnActualiser: "Aggiorna l'elenco delle registrazioni",
+    btnQuitter: "Chiudi l'applicazione",
+    hReglages: "Impostazioni di analisi — comuni a TUTTI i file",
+    pReglages: "Luogo e stagione aiutano BirdNET a mantenere solo le specie plausibili. Queste scelte valgono per tutti i file. Dopo una modifica valgono per le prossime analisi: usa «Rianalizza tutto» per rifare le analisi esistenti con le nuove impostazioni.",
+    lblPays: "Paese in cui sono state fatte le registrazioni",
+    notePays: "(per un paese grande si usa il suo centro)",
+    lblLat: "Latitudine", lblLon: "Longitudine",
+    noteCoords: "Per impostazione predefinita è il centro del paese. Per affinare, inserire le coordinate del luogo di registrazione (una app di mappe le fornisce).",
+    lblAuto: "Usare la data di ciascun file per la stagione",
+    lblSinon: "Altrimenti, stagione fissata al:",
+    lblJour: "giorno", lblMois: "mese", btnCfg: "Salva le impostazioni",
+    cfgOk: "Impostazioni salvate per le prossime analisi. Il pulsante «Rianalizza tutto» le applica ai file già analizzati.",
+    erreur: "Errore: ",
+    hDossiers: "Cartelle analizzate",
+    pDossiers: "La cartella audio del progetto è sempre sorvegliata. Puoi aggiungere qualsiasi altra cartella del disco: viene analizzata allo stesso modo (sottocartelle comprese) e i risultati .birds.json vengono scritti accanto ai file audio.",
+    btnParcourir: "Scegli una cartella da aggiungere",
+    noteParcourir: "(apre la finestra di Windows per scegliere la cartella)",
+    lblChemin: "Oppure incolla il percorso di una cartella",
+    btnAjout: "Aggiungi questa cartella",
+    dosPrincipal: " — cartella del progetto, sempre sorvegliata",
+    btnRetirer: "Non sorvegliare più ",
+    dosRetire: "Cartella rimossa (i suoi file e le analisi restano sul disco).",
+    dosAjoute: "Cartella aggiunta: i suoi file audio vanno in analisi.",
+    dosAnnule: "Annullato.",
+    dosFenetre: "Finestra di scelta aperta sul desktop (Alt+Tab se non è in primo piano)…",
+    dosColle: "Incolla prima il percorso di una cartella.",
+    dosErr: "Errore durante la scelta della cartella.",
+    hAffichage: "Visualizzazione", lblLangue: "Lingua dei nomi degli uccelli",
+    lblFaibles: "Mostra anche i rilevamenti deboli (confidenza sotto il 25 %)",
+    lblDuree: "Durata degli estratti ascoltati",
+    sec3: "3 secondi (finestra BirdNET)", sec6: "6 secondi",
+    sec10: "10 secondi", sec15: "15 secondi",
+    btnStop: "Ferma la riproduzione",
+    bloque: "Il browser ha bloccato il suono: premi un tasto, per esempio Tab, e la riproduzione partirà da sola.",
+    lectureImpossible: "Riproduzione impossibile: ",
+    hListe: "Registrazioni", sommaireLabel: "Sommario delle registrazioni",
+    sommaireAller: "Vai direttamente a una registrazione:",
+    noteOrdre: "Le specie sono elencate nell'ordine in cui si sentono nella registrazione, non dalla più alla meno sicura.",
+    aucunFichier: "Nessun file audio nella cartella audio.",
+    nEsp1: "1 specie", nEspN: "{n} specie",
+    nDet1: "1 rilevamento", nDetN: "{n} rilevamenti",
+    nCanaux1: "1 canale", nCanauxN: "{n} canali",
+    prise: "registrato il {d}",
+    stEnCours: "in analisi", stAttente: "in attesa",
+    stErreur: "errore: ", stPasAnalyse: "non ancora analizzato",
+    stIllisible: "risultato illeggibile",
+    btnVoir: "Mostra le specie", btnMasquer: "Nascondi le specie",
+    btnReanalyser: "Rianalizza questo file",
+    aucuneEspece: "Nessuna specie sopra la soglia scelta.",
+    faible: " (debole)", incertain: " (incerto)",
+    confMax: "confidenza max ",
+    nPassages1: "1 passaggio", nPassagesN: "{n} passaggi",
+    deA: "da {a} a {b}",
+    ecouter: "Ascolta ", aT: "a ", chantDe: "canto di ",
+    posC: "centro", posCG: "centro-sinistra", posG: "sinistra",
+    posCD: "centro-destra", posD: "destra", posH: "sopra",
+    uMin: " min ", uS: " s",
+    eAnalyse: "Analisi in corso: {f} — {e} — da {t}",
+    eAttenteSuite: "; {n} in attesa",
+    eAttente1: "1 file in attesa di analisi.",
+    eAttenteN: "{n} file in attesa di analisi.",
+    eAucune: "Nessuna analisi in corso.",
+    eFaits1: "1 analisi completata dall'avvio.",
+    eFaitsN: "{n} analisi completate dall'avvio.",
+    eActualise: "Aggiorna l'elenco per vedere i nuovi risultati.",
+    eErreurs1: "1 file in errore (dettagli nell'elenco).",
+    eErreursN: "{n} file in errore (dettagli nell'elenco).",
+    eInjoignable: "Server irraggiungibile.",
+    eArrete: "BirdNET è fermo. Puoi chiudere questa scheda.",
+    confForce: "Rianalizzare tutto? Le analisi esistenti saranno rifatte.",
+    confQuit: "Fermare BirdNET? La finestra della console si chiuderà da sola.",
+    btnJournalAff: "Mostra il registro del server",
+    btnJournalMasq: "Nascondi il registro del server",
+    hJournal: "Registro",
+    confQuitAppli: "Chiudere l'applicazione?",
+    hApropos: "Informazioni",
+    aproposAppli: "{nom}, versione {version}. Software libero con licenza MIT.",
+    aproposBirdnet: "Gli uccelli sono identificati da BirdNET (K. Lisa Yang Center for Conservation Bioacoustics del Cornell Lab of Ornithology e Università Tecnica di Chemnitz). Il suo modello è sotto licenza CC BY-NC-SA 4.0: solo uso non commerciale.",
+    aproposLicences: "Le licenze di tutti i componenti sono nel file LICENSES.txt del programma.",
+    lienSources: "Codice sorgente e nuove versioni (GitHub)"
+  }
+  };
+
+  var LANG_APPAREIL = (navigator.language || "fr").toLowerCase();
+  var LANG_UI = LANG_APPAREIL.slice(0, 2);
+  // francais = page d'origine (DICO null) ; langue inconnue -> anglais
+  var DICO = LANG_UI === "fr" ? null : (TRAD[LANG_UI] || TRAD.en);
+  if (DICO && !TRAD[LANG_UI]) { LANG_UI = "en"; }
+  document.documentElement.lang = LANG_UI;
+
+  function t(cle) {
+    return (DICO && DICO[cle]) || TRAD.fr[cle] || cle;
+  }
+
+  function tf(cle, valeurs) {
+    var s = t(cle);
+    Object.keys(valeurs).forEach(function (k) {
+      s = s.replace("{" + k + "}", valeurs[k]);
+    });
+    return s;
+  }
+
+  /* Pluriel sans "(s)" : cle + "1" au singulier, cle + "N" sinon. Les
+     lecteurs d'ecran lisent "passage(s)" tres mal ("passage parenthese
+     esse") — retour utilisateur 2026-09. */
+  function tn(cle, n) {
+    return t(cle + (n === 1 ? "1" : "N")).replace("{n}", n);
+  }
+
+  // Traduction des textes statiques (attributs data-i18n), une fois.
+  if (DICO) {
+    document.title = t("titre");
+    Array.prototype.forEach.call(
+      document.querySelectorAll("[data-i18n]"), function (el) {
+        var cle = el.getAttribute("data-i18n");
+        if (DICO[cle]) { el.textContent = DICO[cle]; }
+      });
+  }
+
+  function $(id) { return document.getElementById(id); }
+
+  function getJSON(url) {
+    return fetch(url).then(function (r) { return r.json(); });
+  }
+
+  function postJSON(url, corps) {
+    return fetch(url, { method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(corps || {}) })
+      .then(function (r) { return r.json(); });
+  }
+
+  function mmss(s) {
+    s = Math.max(0, Math.round(s));
+    var m = Math.floor(s / 60);
+    if (!m) { return s + t("uS"); }
+    return m + t("uMin") + String(s % 60).padStart(2, "0") + t("uS");
+  }
+
+  function pct(c) { return Math.round(c * 100) + " %"; }
+
+  // --- Ecoute des extraits ---
+  /* Cas normal (outil local) : la lecture est faite par le SERVEUR
+     (winsound, POST /api/jouer), sur la meme machine. Aucune politique
+     autoplay du navigateur : le clic simule par NVDA en mode navigation
+     (barre d'espace) marche toujours, sans Tab prealable — en mode
+     navigation NVDA consomme fleches et lettres, aucune vraie touche
+     n'atteint le navigateur, meme un AudioContext restait suspendu.
+     Web Audio reste en SECOURS (acces distant, ou serveur non Windows) :
+     lui n'a besoin d'etre debloque qu'une fois (premiere vraie touche). */
+  var EXTRAIT_MAX = 30;         // meme garde-fou que le serveur
+  var lectureServeur =
+      /^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
+  var ctxAudio = null, sourceCour = null;
+
+  function ctx() {
+    if (!ctxAudio) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      ctxAudio = new AC();
+      ctxAudio.addEventListener("statechange", majBlocage);
+    }
+    return ctxAudio;
+  }
+
+  function majBlocage() {
+    if (ctxAudio && ctxAudio.state === "suspended" && sourceCour) {
+      $("lectureEtat").textContent = t("bloque");
+    } else {
+      $("lectureEtat").textContent = "";
+    }
+  }
+
+  /* Premiere vraie touche / premier vrai clic : debloque le contexte audio.
+     Un extrait deja demande (source demarree pendant la suspension) part
+     alors tout seul, depuis son debut. */
+  function debloquer() {
+    if (ctxAudio && ctxAudio.state === "suspended") {
+      ctxAudio.resume();
+    }
+  }
+  document.addEventListener("keydown", debloquer, true);
+  document.addEventListener("mousedown", debloquer, true);
+
+  function arreterLecture() {
+    if (lectureServeur) {
+      postJSON("/api/arreter", {}).catch(function () {});
+    }
+    if (sourceCour) {
+      try { sourceCour.stop(); } catch (e) {}
+      sourceCour = null;
+    }
+  }
+
+  function jouer(rel, debut, duree) {
+    if (lectureServeur) {
+      postJSON("/api/jouer", { f: rel, d: debut, l: duree })
+        .then(function (rep) {
+          if (!rep || !rep.ok) { throw new Error((rep && rep.erreur) || "?"); }
+        })
+        .catch(function () {
+          // Serveur non Windows, ou page ouverte a distance : on bascule
+          // definitivement sur la lecture navigateur (Web Audio).
+          lectureServeur = false;
+          jouerNavigateur(rel, debut, duree);
+        });
+    } else {
+      jouerNavigateur(rel, debut, duree);
+    }
+  }
+
+  function jouerNavigateur(rel, debut, duree) {
+    var u = "/api/extrait?f=" + encodeURIComponent(rel) +
+            "&d=" + debut.toFixed(2) + "&l=" + duree.toFixed(2);
+    var c = ctx();
+    fetch(u)
+      .then(function (r) {
+        if (!r.ok) { throw new Error("extrait injoignable"); }
+        return r.arrayBuffer();
+      })
+      .then(function (buf) { return c.decodeAudioData(buf); })
+      .then(function (audio) {
+        arreterLecture();
+        var s = c.createBufferSource();
+        s.buffer = audio;
+        s.connect(c.destination);
+        s.onended = function () { if (sourceCour === s) { sourceCour = null; } };
+        sourceCour = s;
+        s.start();
+        if (c.state === "suspended") { c.resume(); }
+        majBlocage();
+      })
+      .catch(function (e) {
+        $("lectureEtat").textContent = t("lectureImpossible") + e.message;
+      });
+  }
+
+  /* Fenetre d'ecoute d'une occurrence : centree sur t (le pic d'energie), un
+     peu plus d'air apres qu'avant. Un chant long est joue en entier (plafond
+     EXTRAIT_MAX), sinon on prend la longueur choisie dans la page. */
+  function fenetre(o, dureeFichier) {
+    var L = parseFloat($("selDuree").value) || 6;
+    var etendue = o.fin - o.debut;
+    var debut, duree;
+    if (etendue <= L) {
+      duree = L;
+      debut = o.t - L * 0.35;
+    } else {
+      duree = Math.min(etendue + 1, EXTRAIT_MAX);
+      debut = o.debut - 0.5;
+    }
+    debut = Math.max(0, debut);
+    if (dureeFichier) {
+      debut = Math.min(debut, Math.max(0, dureeFichier - duree));
+    }
+    return { debut: debut, duree: duree };
+  }
+
+  /* Detections consecutives d'une MEME espece = un seul chant : on les fusionne
+     (sinon un oiseau qui chante 30 s donne 10 boutons). Un oiseau qui revient
+     plus tard donne bien une occurrence de plus. */
+  var TOL_FUSION = 1.5;         // trou tolere entre deux fenetres (secondes)
+
+  function fusionner(dets) {
+    var occ = [], cour = null;
+    dets.forEach(function (d) {
+      var t = (d.t === null || d.t === undefined) ? d.debut : d.t;
+      if (cour && d.debut <= cour.fin + TOL_FUSION) {
+        cour.fin = Math.max(cour.fin, d.fin);
+        cour.n += 1;
+        if (d.conf > cour.conf) { cour.conf = d.conf; cour.t = t; }
+      } else {
+        cour = { debut: d.debut, fin: d.fin, conf: d.conf, t: t, n: 1,
+                 pos: {} };
+        occ.push(cour);
+      }
+      if (d.pos) { cour.pos[d.pos] = (cour.pos[d.pos] || 0) + 1; }
+    });
+    return occ;
+  }
+
+  /* Positions : uniquement l'axe gauche-droite (C/CG/G/CD/D, H = au-dessus).
+     Avant/arriere ont ete abandonnes (retour utilisateur 2026-09 : "front"
+     ne parlait a personne). Les sidecars deja ecrits peuvent contenir les
+     ANCIENS codes 8 secteurs : on les rabat sur le nouvel axe. */
+  var POS_CODES = ["C", "CG", "G", "CD", "D", "H"];
+  var POS_ANCIENS = { Av: "C", Ar: "C", AvG: "G", ArG: "G",
+                      AvD: "D", ArD: "D" };
+
+  function posDominante(compte) {
+    var max = null, n = 0;
+    Object.keys(compte).forEach(function (p) {
+      if (compte[p] > n) { n = compte[p]; max = p; }
+    });
+    if (!max) { return null; }
+    max = POS_ANCIENS[max] || max;
+    return POS_CODES.indexOf(max) >= 0 ? t("pos" + max) : null;
+  }
+
+  // --- Etat (poll discret : simple texte, PAS d'aria-live) ---
+  var serveurArrete = false;    // apres "Quitter" : on fige l'etat affiche
+  var appli = null;             // infos du programme portable (/api/config)
+  var faitsVus = -1;            // pour actualiser la liste apres les analyses
+
+  function rafraichirEtat() {
+    if (serveurArrete) { return; }
+    getJSON("/api/etat").then(function (e) {
+      var txt;
+      if (e.en_cours) {
+        txt = tf("eAnalyse", { f: e.en_cours, e: e.etape,
+                               t: mmss(e.depuis) });
+        if (e.attente.length) {
+          txt += tf("eAttenteSuite", { n: e.attente.length });
+        }
+      } else if (e.attente.length) {
+        txt = tn("eAttente", e.attente.length);
+      } else {
+        txt = t("eAucune");
+      }
+      if (e.faits) { txt += " " + tn("eFaits", e.faits); }
+      /* La liste se met a jour TOUTE SEULE quand la file d'analyse se vide —
+         mais jamais pendant qu'un panneau d'especes est ouvert (le lecteur
+         d'ecran perdrait sa position dans la page). */
+      if (faitsVus < 0 || e.faits < faitsVus) {
+        faitsVus = e.faits;
+      } else if (e.faits > faitsVus && !e.en_cours && !e.attente.length) {
+        if (!document.querySelector(".especes:not(:empty)")) {
+          faitsVus = e.faits;
+          rafraichirFichiers();
+        } else {
+          txt += " " + t("eActualise");
+        }
+      }
+      var nErr = Object.keys(e.erreurs).length;
+      if (nErr) { txt += " " + tn("eErreurs", nErr); }
+      $("etat").textContent = txt;
+      $("journal").textContent = e.journal.join("\n");
+    }).catch(function () {
+      $("etat").textContent = t("eInjoignable");
+    });
+  }
+
+  // --- Langues ---
+  function chargerLangues() {
+    return getJSON("/api/langues").then(function (liste) {
+      // Pas de langue memorisee -> celle de l'appareil si BirdNET l'a,
+      // sinon anglais.
+      if (!langue) {
+        var codes = liste.map(function (l) { return l.code; });
+        langue = codes.filter(function (c) {
+          return c === LANG_APPAREIL.slice(0, 2) ||
+                 c.indexOf(LANG_APPAREIL.slice(0, 2) + "_") === 0;
+        })[0] || "en_uk";
+      }
+      var sel = $("selLangue");
+      sel.innerHTML = "";
+      liste.forEach(function (l) {
+        var o = document.createElement("option");
+        o.value = l.code;
+        o.textContent = l.nom;
+        if (l.code === langue) { o.selected = true; }
+        sel.appendChild(o);
+      });
+    });
+  }
+
+  function chargerLabels() {
+    return getJSON("/api/labels?lang=" + encodeURIComponent(langue))
+      .then(function (t) { labels = t; });
+  }
+
+  function nomEspece(sci, especes) {
+    if (labels[sci]) { return labels[sci]; }
+    var e = especes && especes[sci];
+    if (e) { return e.fr || e.en || sci; }
+    return sci;
+  }
+
+  // --- Reglages d'analyse (lieu, saison) et dossiers surveilles ---
+  // Noms des mois dans la langue de l'appareil, sans dictionnaire (Intl).
+  var MOIS = [];
+  (function () {
+    var fmt;
+    try {
+      fmt = new Intl.DateTimeFormat(navigator.language, { month: "long" });
+    } catch (e) {
+      fmt = new Intl.DateTimeFormat("fr", { month: "long" });
+    }
+    for (var i = 0; i < 12; i++) {
+      MOIS.push(fmt.format(new Date(2024, i, 1)));
+    }
+  })();
+
+  // Centre de chaque pays (rempli par /api/pays) : sert a pre-remplir les
+  // champs latitude/longitude quand on change de pays.
+  var CENTRES = {};
+
+  /* Nom du pays dans la langue de l'APPAREIL, a partir de son code ISO
+     (Intl.DisplayNames : aucun dictionnaire, meme principe que les mois).
+     Un anglophone trouve ainsi "United Kingdom" — le serveur, lui, ne
+     connait que les noms francais (cles de PAYS, valeur de la config).
+     Secours : le nom francais si le navigateur ne sait pas traduire. */
+  var NOMS_PAYS = null;
+  try {
+    NOMS_PAYS = new Intl.DisplayNames([navigator.language], {
+      type: "region" });
+  } catch (e) {}
+
+  function nomPays(p) {
+    if (NOMS_PAYS && p.code) {
+      try {
+        var n = NOMS_PAYS.of(p.code);
+        if (n && n !== p.code) { return n; }
+      } catch (e) {}
+    }
+    return p.nom;
+  }
+
+  function chargerConfig() {
+    return getJSON("/api/pays").then(function (liste) {
+      var sel = $("cfgPays");
+      sel.innerHTML = "";
+      // re-tri sur le nom AFFICHE (le serveur trie sur le nom francais)
+      liste.map(function (p) {
+        CENTRES[p.nom] = { lat: p.lat, lon: p.lon };
+        return { nom: p.nom, aff: nomPays(p) };
+      }).sort(function (a, b) {
+        return a.aff.localeCompare(b.aff, undefined,
+                                   { sensitivity: "base" });
+      }).forEach(function (p) {
+        var o = document.createElement("option");
+        o.value = p.nom;          // identifiant = nom francais (config)
+        o.textContent = p.aff;    // affichage = langue de l'appareil
+        sel.appendChild(o);
+      });
+      return getJSON("/api/config");
+    }).then(function (c) {
+      $("cheminAudio").textContent = c.dossier_principal;
+      $("cfgPays").value = c.pays || "France";
+      $("cfgLat").value = c.lat;
+      $("cfgLon").value = c.lon;
+      $("cfgAuto").checked = c.date_mode !== "fixe";
+      $("cfgJour").value = c.jour;
+      $("cfgMois").value = c.mois;
+      afficherDossiers(c.dossiers || []);
+      // Programme portable (exe) : son nom, sa version, ses sources.
+      appli = c.appli || null;
+      if (appli) {
+        document.title = appli.nom;
+        $("aproposAppli").textContent = tf("aproposAppli",
+          { nom: appli.nom, version: appli.version });
+        $("aproposAppli").hidden = false;
+        $("aproposLicences").hidden = false;
+        if (appli.sources) {
+          $("lienSources").href = appli.sources;
+          $("aproposSources").hidden = false;
+        }
+      }
+    });
+  }
+
+  function afficherDossiers(ds) {
+    var ul = $("listeDossiers");
+    ul.innerHTML = "";
+    var li0 = document.createElement("li");
+    li0.textContent = ($("cheminAudio").textContent || "audio") +
+                      t("dosPrincipal");
+    ul.appendChild(li0);
+    ds.forEach(function (d) {
+      var li = document.createElement("li");
+      li.textContent = d + " ";
+      var b = document.createElement("button");
+      b.textContent = t("btnRetirer") + d;
+      b.addEventListener("click", function () {
+        postJSON("/api/dossiers", { retirer: d }).then(function (r) {
+          afficherDossiers(r.dossiers || []);
+          $("dosRetour").textContent = t("dosRetire");
+          rafraichirFichiers();
+        });
+      });
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
+  function dossierAjoute(r) {
+    if (r.erreur) {
+      $("dosRetour").textContent = t("erreur") + r.erreur;
+    } else if (r.dossiers) {
+      $("dosRetour").textContent = t("dosAjoute");
+      afficherDossiers(r.dossiers);
+      rafraichirFichiers();
+      rafraichirEtat();
+    } else {
+      $("dosRetour").textContent = t("dosAnnule");
+    }
+  }
+
+  // --- Liste des enregistrements ---
+  function rafraichirFichiers() {
+    getJSON("/api/fichiers").then(function (liste) {
+      var zone = $("fichiers");
+      zone.innerHTML = "";
+      if (!liste.length) {
+        var pv = document.createElement("p");
+        pv.textContent = t("aucunFichier");
+        zone.appendChild(pv);
+        return;
+      }
+      var nav = $("sommaire");
+      nav.innerHTML = "";
+      var ulNav = null;
+      if (liste.length > 1) {
+        nav.setAttribute("aria-label", t("sommaireLabel"));
+        var pn = document.createElement("p");
+        pn.textContent = t("sommaireAller");
+        nav.appendChild(pn);
+        ulNav = document.createElement("ul");
+        nav.appendChild(ulNav);
+        nav.hidden = false;
+      } else {
+        nav.hidden = true;
+      }
+
+      liste.forEach(function (f, i) {
+        var sec = document.createElement("section");
+        sec.className = "fichier";
+        var h = document.createElement("h3");
+        h.id = "fic" + i;
+        h.tabIndex = -1;
+        h.textContent = f.f;
+        sec.appendChild(h);
+        var statutTxt = { en_cours: t("stEnCours"), attente: t("stAttente"),
+                          pas_analyse: t("stPasAnalyse"),
+                          illisible: t("stIllisible") }[f.statut] ||
+                        (f.statut === "erreur"
+                          ? t("stErreur") + (f.erreur || "") : "");
+        if (ulNav) {
+          var li = document.createElement("li");
+          var a = document.createElement("a");
+          a.href = "#fic" + i;
+          a.textContent = f.f + " — " + (f.statut === "analyse"
+            ? tn("nEsp", f.n_especes) : statutTxt);
+          li.appendChild(a);
+          ulNav.appendChild(li);
+        }
+        var p = document.createElement("p");
+        p.className = "resume";
+        var morceaux = [];
+        if (f.statut === "analyse") {
+          morceaux.push(tn("nEsp", f.n_especes) + ", " +
+                        tn("nDet", f.n_detections));
+          if (f.duree) { morceaux.push(mmss(f.duree)); }
+          if (f.canaux) { morceaux.push(tn("nCanaux", f.canaux)); }
+          if (f.date_prise) {
+            morceaux.push(tf("prise", { d: f.date_prise }));
+          }
+        } else {
+          morceaux.push(statutTxt);
+          if (f.statut === "erreur") { p.className += " statut-erreur"; }
+        }
+        p.textContent = morceaux.join(" — ");
+        sec.appendChild(p);
+        if (f.statut === "analyse") {
+          var btn = document.createElement("button");
+          btn.textContent = t("btnVoir");
+          var det = document.createElement("div");
+          det.className = "especes";
+          btn.addEventListener("click", function () {
+            if (det.childNodes.length) {
+              det.innerHTML = "";
+              btn.textContent = t("btnVoir");
+            } else {
+              afficherEspeces(f, det);
+              btn.textContent = t("btnMasquer");
+            }
+          });
+          sec.appendChild(btn);
+          sec.appendChild(det);
+        }
+        var re = document.createElement("button");
+        re.textContent = t("btnReanalyser");
+        re.addEventListener("click", function () {
+          postJSON("/api/analyser", { f: f.f, force: true })
+            .then(rafraichirEtat);
+        });
+        sec.appendChild(re);
+        zone.appendChild(sec);
+      });
+    });
+  }
+
+  // --- Detail des especes d'un enregistrement ---
+  function afficherEspeces(f, zone) {
+    var rel = f.f;
+    getJSON("/api/oiseaux?f=" + encodeURIComponent(rel)).then(function (sc) {
+      if (sc.erreur) {
+        zone.innerHTML = "<p>" + sc.erreur + "</p>";
+        return;
+      }
+      var dureeFichier = sc.duree || f.duree || 0;
+      var seuil = $("chkFaibles").checked ? 0 : 0.25;
+      var parEspece = {};
+      (sc.detections || []).forEach(function (d) {
+        if (d.conf < seuil) { return; }
+        (parEspece[d.sci] = parEspece[d.sci] || []).push(d);
+      });
+      var scis = Object.keys(parEspece);
+      zone.innerHTML = "";
+      if (!scis.length) {
+        var pv = document.createElement("p");
+        pv.textContent = t("aucuneEspece");
+        zone.appendChild(pv);
+        return;
+      }
+      var especes = scis.map(function (sci) {
+        var occ = fusionner(parEspece[sci]);
+        var conf = 0, pos = {};
+        occ.forEach(function (o) {
+          if (o.conf > conf) { conf = o.conf; }
+          Object.keys(o.pos).forEach(function (p) {
+            pos[p] = (pos[p] || 0) + o.pos[p];
+          });
+        });
+        return { sci: sci, occ: occ, conf: conf, pos: pos };
+      }).sort(function (a, b) {
+        // ordre d'APPARITION dans l'enregistrement (premier passage),
+        // pas par confiance : la page suit le deroulement de l'audio
+        return a.occ[0].debut - b.occ[0].debut;
+      });
+
+      especes.forEach(function (e) {
+        var nom = nomEspece(e.sci, sc.especes);
+        var h = document.createElement("h4");
+        h.textContent = nom;
+        if (e.conf < 0.25) { h.textContent += t("faible"); }
+        else if (e.conf < 0.5) { h.textContent += t("incertain"); }
+        if (e.conf < 0.25) { h.className = "faible"; }
+        zone.appendChild(h);
+
+        var p = document.createElement("p");
+        p.className = "resume";
+        var bouts = [t("confMax") + pct(e.conf),
+                     tn("nPassages", e.occ.length),
+                     tf("deA", { a: mmss(e.occ[0].debut),
+                                 b: mmss(e.occ[e.occ.length - 1].fin) })];
+        var pd = posDominante(e.pos);
+        if (pd) { bouts.push(pd); }
+        p.textContent = bouts.join(", ");
+        zone.appendChild(p);
+
+        /* Un bouton par ligne, PAS de liste a puces : en mode navigation
+           NVDA la fleche s'arretait sur la puce (li) et la barre d'espace
+           ne lancait pas la lecture (retour utilisateur 2026-09). */
+        var div = document.createElement("div");
+        div.className = "passages";
+        e.occ.forEach(function (o) {
+          var b = document.createElement("button");
+          var etiq = [t("ecouter") + nom, t("aT") + mmss(o.t), pct(o.conf)];
+          if (o.fin - o.debut > 4) {
+            etiq.push(t("chantDe") + mmss(o.fin - o.debut));
+          }
+          var po = posDominante(o.pos);
+          if (po) { etiq.push(po); }
+          b.textContent = etiq.join(" — ");
+          b.addEventListener("click", function () {
+            var w = fenetre(o, dureeFichier);
+            jouer(rel, w.debut, w.duree);
+          });
+          div.appendChild(b);
+        });
+        zone.appendChild(div);
+      });
+    });
+  }
+
+  // --- Branchements ---
+  $("btnScan").addEventListener("click", function () {
+    postJSON("/api/analyser", {}).then(function () {
+      rafraichirEtat();
+    });
+  });
+  $("btnForce").addEventListener("click", function () {
+    if (confirm(t("confForce"))) {
+      postJSON("/api/analyser", { force: true }).then(rafraichirEtat);
+    }
+  });
+  $("btnActualiser").addEventListener("click", rafraichirFichiers);
+  $("btnJournal").addEventListener("click", function () {
+    var j = $("journal");
+    j.hidden = !j.hidden;
+    this.textContent = j.hidden ? t("btnJournalAff") : t("btnJournalMasq");
+  });
+  $("selLangue").addEventListener("change", function () {
+    langue = this.value;
+    localStorage.setItem("birdnet.langue", langue);
+    chargerLabels().then(rafraichirFichiers);
+  });
+  $("chkFaibles").addEventListener("change", rafraichirFichiers);
+  $("btnStop").addEventListener("click", arreterLecture);
+  $("btnQuitter").addEventListener("click", function () {
+    // Dans la fenetre du programme, pas de console : texte adapte, et la
+    // fenetre se ferme d'elle-meme.
+    if (!confirm(t(appli && appli.fenetre ? "confQuitAppli" : "confQuit"))) {
+      return;
+    }
+    serveurArrete = true;
+    postJSON("/api/quitter", {}).catch(function () {});
+    $("etat").textContent = t("eArrete");
+  });
+  // La barre d'ESPACE active aussi les liens (le navigateur ne le fait que
+  // pour les boutons ; pour un lien elle ferait defiler la page).
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === " " || e.key === "Spacebar") &&
+        e.target && e.target.tagName === "A") {
+      e.preventDefault();
+      e.target.click();
+    }
+  });
+  var duree0 = localStorage.getItem("birdnet.duree");
+  if (duree0) { $("selDuree").value = duree0; }
+  $("selDuree").addEventListener("change", function () {
+    localStorage.setItem("birdnet.duree", this.value);
+  });
+
+  // Reglages d'analyse
+  MOIS.forEach(function (nom, i) {
+    var o = document.createElement("option");
+    o.value = i + 1;
+    o.textContent = nom;
+    $("cfgMois").appendChild(o);
+  });
+  // Changer de pays remet les coordonnees au centre de ce pays (l'utilisateur
+  // peut ensuite les affiner a la main).
+  $("cfgPays").addEventListener("change", function () {
+    var c = CENTRES[this.value];
+    if (c) {
+      $("cfgLat").value = c.lat;
+      $("cfgLon").value = c.lon;
+    }
+  });
+  $("btnCfg").addEventListener("click", function () {
+    var lat = parseFloat($("cfgLat").value);
+    var lon = parseFloat($("cfgLon").value);
+    var corps = {
+      pays: $("cfgPays").value,
+      date_mode: $("cfgAuto").checked ? "auto" : "fixe",
+      jour: parseInt($("cfgJour").value, 10),
+      mois: parseInt($("cfgMois").value, 10)
+    };
+    if (isFinite(lat) && isFinite(lon)) {  // champs vides -> centre du pays
+      corps.lat = lat;
+      corps.lon = lon;
+    }
+    postJSON("/api/config", corps).then(function (r) {
+      $("cfgRetour").textContent = r.erreur
+        ? t("erreur") + r.erreur
+        : t("cfgOk");
+      if (!r.erreur && !("lat" in corps)) {   // champs laisses vides :
+        var c = CENTRES[corps.pays];          // montrer ce qui a ete retenu
+        if (c) {
+          $("cfgLat").value = c.lat;
+          $("cfgLon").value = c.lon;
+        }
+      }
+    });
+  });
+
+  // Dossiers surveilles
+  $("btnParcourir").addEventListener("click", function () {
+    $("dosRetour").textContent = t("dosFenetre");
+    postJSON("/api/choisir_dossier", {}).then(dossierAjoute)
+      .catch(function () {
+        $("dosRetour").textContent = t("dosErr");
+      });
+  });
+  $("btnAjoutDossier").addEventListener("click", function () {
+    var d = $("champDossier").value.trim();
+    if (!d) {
+      $("dosRetour").textContent = t("dosColle");
+      return;
+    }
+    postJSON("/api/dossiers", { ajouter: d }).then(function (r) {
+      if (!r.erreur) { $("champDossier").value = ""; }
+      dossierAjoute(r);
+    });
+  });
+
+  chargerConfig();
+  chargerLangues()
+    .then(chargerLabels)
+    .then(rafraichirFichiers);
+  rafraichirEtat();
+  setInterval(rafraichirEtat, 5000);
+})();
+</script>
+</body>
+</html>
