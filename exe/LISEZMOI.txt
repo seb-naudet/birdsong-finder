@@ -1,5 +1,5 @@
 =====================================================================
- @NOM@ @VERSION@ - reconnaître les oiseaux qui chantent dans vos
+ @NOM@ @VERSION@ - reconnaître les espèces d'oiseaux dans vos
  enregistrements   (English version: see README.txt)
 =====================================================================
 
@@ -7,11 +7,10 @@
 vos enregistrements audio et vidéo grâce à BirdNET, le modèle de
 reconnaissance des chants du Cornell Lab of Ornithology et de
 l'Université technique de Chemnitz. Il a été conçu pour les
-utilisateurs de lecteur d'écran (NVDA, JAWS, Narrateur) et convient
-tout autant à tout le monde.
+utilisateurs de lecteur d'écran (NVDA, JAWS, Narrateur).
 
-Tout se passe sur votre ordinateur : rien n'est envoyé sur Internet,
-et aucune connexion n'est nécessaire.
+Tout se passe en local sur votre ordinateur : rien n'est envoyé sur
+Internet, et aucune connexion n'est nécessaire.
 
 Programme indépendant, sans lien avec l'équipe de BirdNET.
 
@@ -33,14 +32,20 @@ Programme indépendant, sans lien avec l'équipe de BirdNET.
    ajoutez n'importe quel dossier de l'ordinateur dans la section
    « Dossiers analysés » de la fenêtre. L'analyse démarre toute seule ;
    un son annonce quand tous les fichiers sont faits.
+   Vous pouvez aussi copier (Ctrl+C) ou couper (Ctrl+X) des fichiers
+   ou des dossiers dans l'Explorateur, revenir dans la fenêtre et faire
+   Ctrl+V (ou le bouton « Coller dans audio ») : ils sont copiés (ou
+   déplacés) dans le dossier audio, et les analyses déjà faites les
+   suivent, rien n'est analysé deux fois. Rien de déjà présent n'est
+   remplacé.
 
 4. Dans la liste des enregistrements, « Afficher les espèces » donne
-   les oiseaux entendus, dans l'ordre où on les entend, avec un bouton
-   par passage pour écouter l'extrait autour du chant.
+   les oiseaux entendus, dans l'ordre choisi, avec un bouton par
+   passage pour écouter l'extrait autour du chant.
 
 Pour quitter : fermez la fenêtre (Alt+F4) ou utilisez le bouton
-« Quitter l'application ». Si une analyse tourne, le programme demande
-confirmation ; une analyse interrompue reprend au lancement suivant.
+« Quitter l'application ». Aucune confirmation n'est demandée ; une
+analyse interrompue reprend simplement au lancement suivant.
 Relancer le programme alors qu'il est ouvert ramène sa fenêtre.
 
 Formats acceptés : wav, flac, mp3, ogg, opus, m4a, aac, aiff, wma, et
@@ -66,16 +71,26 @@ ambisonique).
 - La fenêtre elle-même suit la langue de Windows (français, anglais,
   allemand, espagnol, italien ; anglais sinon).
 - Longueur des extraits écoutés : 3, 6, 10 ou 15 secondes.
+- Touches : Espace sur un passage le joue (ou le rejoue), Ctrl+Espace
+  met en pause ou reprend, Maj+Espace arrête.
 
-Les résultats sont rangés dans un petit fichier « nom-du-fichier.birds.json »
-à côté de chaque enregistrement : si vous déplacez un enregistrement,
-déplacez aussi son .birds.json et l'analyse suit.
+Les résultats sont rangés dans « data\analyses » : « analyses\audio\ »
+reflète le dossier audio, et chaque dossier ajouté dans la fenêtre a son
+propre sous-dossier
+(« nom-du-dossier_xxxxxxxx », avec un dossier.txt qui donne le chemin
+d'origine). Un enregistrement supprimé ou déplacé ailleurs perd son
+résultat automatiquement ; un dossier retiré de la surveillance voit ses
+résultats supprimés au prochain lancement. Un dossier surveillé
+introuvable au lancement (disque débranché ?) garde ses résultats et est
+signalé « introuvable » dans la fenêtre. Les anciennes versions posaient
+les résultats à côté de chaque enregistrement : ils sont déplacés dans
+« data\analyses » au premier lancement.
 
 ---------------------------------------------------------------------
  LECTEURS D'ÉCRAN
 ---------------------------------------------------------------------
 La fenêtre affiche une page web : NVDA et JAWS utilisent le mode
-navigation, comme dans un navigateur.
+navigation, comme dans Chrome ou Edge.
 - Titres : niveau 2 = sections, niveau 3 = enregistrements, niveau 4 =
   espèces. Une liste de liens en tête des enregistrements mène
   directement à l'un d'eux.
@@ -87,16 +102,78 @@ navigation, comme dans un navigateur.
  OÙ SONT MES FICHIERS ?
 ---------------------------------------------------------------------
 Tout reste dans le dossier du programme :
-- audio\  ........ vos enregistrements (et leurs résultats .birds.json)
-- data\   ........ réglages, journal (journal.txt), fichiers de travail
-                   et cache de la fenêtre
+- audio\  ........ vos enregistrements
+- data\   ........ résultats d'analyse (analyses\), journaux du direct
+                   (direct\), réglages, journal
+                   (journal.txt), fichiers de travail et cache de la fenêtre
 Décompressé dans un dossier protégé en écriture, le programme utilise
 %LocalAppData%\@EXE@ à la place.
 
 Pour désinstaller : fermez le programme et supprimez son dossier
 (sortez d'abord vos enregistrements du dossier audio si vous voulez
-les garder). Rien n'est écrit dans le registre ni ailleurs. Les
-dossiers ajoutés dans la fenêtre gardent leurs fichiers .birds.json.
+les garder). Rien n'est écrit dans le registre ni ailleurs, pas même
+dans les dossiers ajoutés dans la fenêtre.
+
+---------------------------------------------------------------------
+ ANALYSE EN DIRECT (section « Direct » de la page)
+---------------------------------------------------------------------
+Birdsong Finder peut aussi écouter en temps réel une entrée audio de
+l'ordinateur : un micro, une interface audio, le « Mixage stéréo » de la
+carte son, ou un câble virtuel (par exemple VB-Cable) qui transporte ce
+qu'un autre programme joue. Choisissez l'entrée dans la liste, puis
+« Démarrer le direct ». Les entrées mono et stéréo sont analysées comme
+les fichiers (gauche et droite séparées en stéréo, avec une position
+gauche-droite).
+- La liste « Espèces entendues pendant ce direct » grandit au fil des
+  détections ; chaque ligne dit si l'oiseau s'entend en ce moment,
+  combien de fois il a été détecté, à quelle heure pour la première
+  fois et sa meilleure confiance. La liste ne se réorganise jamais :
+  on peut la parcourir au lecteur d'écran à tout moment.
+- « Annoncer automatiquement chaque espèce entendue » : cochée, chaque
+  nouvelle espèce (et chaque confirmation d'une espèce incertaine) est
+  dite par le lecteur d'écran dès son arrivée. Décochée par défaut.
+- « Écrire les espèces entendues dans un fichier texte » : cochée, les
+  mêmes événements sont ajoutés dans data\direct\direct_<date>.txt (un
+  fichier par jour ; voir la liste des dossiers ci-dessous).
+- Règles, les mêmes que le direct du VPS ambisonique : une espèce
+  apparaît à 25 % de confiance, est « sûre » à partir de 50 %, reste
+  40 secondes après sa dernière détection ; un nom peut arriver quelques
+  secondes après le chant (l'analyse tourne toutes les 6 secondes sur
+  les 12 dernières secondes).
+- « Écouter l'entrée audio (moniteur) » : joue ce que reçoit l'entrée
+  sur la sortie par défaut de l'ordinateur, pour vérifier un micro ou
+  un câble. Désactivé par défaut, et de nouveau désactivé à chaque
+  démarrage. Il est bloqué pour les entrées de type « Mixage stéréo »
+  (elles reprennent ce que l'ordinateur joue : le moniteur
+  s'entendrait lui-même, de plus en plus fort), et il se coupe tout
+  seul si l'entrée reste saturée une seconde entière.
+
+Mixage stéréo et câbles virtuels
+Le « Mixage stéréo » (cartes Realtek ; « What U Hear » sur les cartes
+Creative) est une entrée qui enregistre tout ce que l'ordinateur joue :
+une webradio, un lecteur, un direct dans le navigateur… Avec lui,
+Birdsong Finder analyse en temps réel ce que vous êtes en train
+d'écouter. Windows le désactive ou le cache le plus souvent ; pour
+l'activer :
+  1. Windows+R, tapez   control mmsys.cpl,,1   puis Entrée : l'onglet
+     « Enregistrement » des paramètres de son s'ouvre.
+  2. Dans la liste, ouvrez le menu contextuel (touche Applications ou
+     Maj+F10) et cochez « Afficher les périphériques désactivés ».
+  3. Sur « Mixage stéréo », menu contextuel, « Activer ».
+  4. De retour dans Birdsong Finder, « Actualiser la liste des
+     entrées ».
+Certaines cartes son (beaucoup de portables, les casques USB) n'ont pas
+de Mixage stéréo du tout : passez alors par un câble virtuel.
+Un câble virtuel (par exemple VB-Cable, gratuit) ajoute une paire de
+périphériques : envoyez le programme à analyser vers « CABLE Input »
+(choisissez-le comme sortie de ce programme, ou comme sortie par défaut
+de Windows), et choisissez « CABLE Output » comme entrée dans Birdsong
+Finder. Pour continuer à entendre le programme vous-même, soit activez
+le moniteur dans la page, soit, dans l'onglet Enregistrement, propriétés
+de « CABLE Output », onglet « Écouter », cochez « Écouter ce
+périphérique » — pas les deux à la fois. N'activez jamais le moniteur
+si le câble est aussi la sortie par défaut de Windows : c'est une
+boucle, là aussi.
 
 ---------------------------------------------------------------------
  EN CAS DE PROBLÈME

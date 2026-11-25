@@ -1,8 +1,8 @@
 # Birdsong Finder
 
-**Birdsong Finder** is a free Windows program that identifies the birds singing in your audio and video recordings. It uses the BirdNET model from the Cornell Lab of Ornithology and Chemnitz University of Technology.
+**Birdsong Finder** is a free Windows program that identifies bird species in your audio and video recordings, and live from an audio input. It uses the BirdNET model from the Cornell Lab of Ornithology and Chemnitz University of Technology.
 
-It was designed by and for screen reader users (NVDA, JAWS, Narrator), and it works just as well for everyone. Everything runs on your own computer: nothing is uploaded, and no Internet connection is needed.
+It was designed by and for screen reader users (NVDA, JAWS, Narrator). Everything runs locally, on your own computer: nothing is uploaded, and no Internet connection is needed.
 
 Birdsong Finder is an independent project. It is not affiliated with or endorsed by the BirdNET team.
 
@@ -16,21 +16,24 @@ The program is not signed with a paid certificate, so the first time Windows may
 
 ## What it does
 
-- Analyses the recordings you put in its `audio` folder, and any other folder you add. New files are analysed automatically.
+- Analyses the recordings you put in its `audio` folder, and any other folder you add. New files are analysed automatically. You can also copy or cut files and folders in Explorer and paste them into the program with Ctrl+V: they go into the `audio` folder and their existing analyses follow them.
 - Accepts audio files (wav, flac, mp3, ogg, opus, m4a, aac, aiff, wma) and videos (mp4, mov, mkv, avi, webm and more). For videos, only the sound track is analysed.
-- Lists the species heard in each recording, in the order you hear them. Each passage has a button that plays the excerpt around the song.
+- Lists the species heard in each recording, in the order you chose: as they appear, from most to least confident, or the reverse. Each passage has a button that plays the excerpt around the song. Space plays, Ctrl+Space pauses or resumes, Shift+Space stops.
+- Search: type one or more species names and get every passage where they appear, across all your recordings, ready to play.
 - For stereo recordings, analyses the left and right channels separately and tells you where each bird is: left, centre left, centre, centre right or right. Four-channel ambisonic (AmbiX) recordings are analysed through six virtual microphones.
+- Live analysis: listens to an audio input of the computer (microphone, audio interface, "Stereo Mix" or a virtual cable) and names the species as they sing. The list of species heard grows as they are detected; each one can be announced automatically by the screen reader, and written to a text file.
 - Shows bird names in the 35 BirdNET languages. The window itself is in English, French, German, Spanish or Italian, following Windows.
 - Uses your country, or your own coordinates, and the season to keep only the species that are plausible there.
 
 ## With a screen reader
 
-The window shows an accessible web page, so NVDA and JAWS work in browse mode, as in a browser.
+The window shows an accessible web page, so NVDA and JAWS work in browse mode, as in Chrome or Edge.
 
 - Headings are organised by level: level 2 for sections, level 3 for recordings, level 4 for species.
 - Each play button gives the full context, for example "Play Common Blackbird - at 2 min 14 s - 78% - centre left".
-- The list never reorganises itself while you are reading it.
+- The lists never reorganise themselves while you are reading them.
 - A sound plays when all analyses are finished.
+- In live analysis, the automatic announcement of each new species is optional and off by default.
 
 The full user guide is in [README.txt](exe/README.txt), and in French in [LISEZMOI.txt](exe/LISEZMOI.txt).
 
@@ -60,7 +63,7 @@ Contact: sebno42@gmail.com. Bug reports and suggestions are also welcome in the 
 
 ## En français
 
-**Birdsong Finder** reconnaît les oiseaux qui chantent dans vos enregistrements audio et vidéo, grâce au modèle BirdNET. Il a été conçu pour les lecteurs d'écran (NVDA, JAWS, Narrateur) et tout se passe sur votre ordinateur. Pour l'installer, téléchargez le ZIP de la [dernière version](https://github.com/seb-naudet/birdsong-finder/releases/latest), décompressez-le et lancez `BirdsongFinder.exe`. Le mode d'emploi complet est dans [LISEZMOI.txt](exe/LISEZMOI.txt).
+**Birdsong Finder** reconnaît les espèces d'oiseaux dans vos enregistrements audio et vidéo, et en direct depuis une entrée audio, grâce au modèle BirdNET. Il a été conçu pour les lecteurs d'écran (NVDA, JAWS, Narrateur) et tout se passe en local sur votre ordinateur. Pour l'installer, téléchargez le ZIP de la [dernière version](https://github.com/seb-naudet/birdsong-finder/releases/latest), décompressez-le et lancez `BirdsongFinder.exe`. Le mode d'emploi complet est dans [LISEZMOI.txt](exe/LISEZMOI.txt).
 
 Le programme est gratuit et son code est sous licence MIT. Le modèle BirdNET est sous licence CC BY-NC-SA 4.0 et n'est permis qu'en usage non commercial : le programme peut donc être partagé, mais pas vendu.
 

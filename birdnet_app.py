@@ -29,7 +29,7 @@ from ctypes import wintypes
 
 NOM = "Birdsong Finder"          # nom affiche (fenetre, page, boites)
 NOM_FICHIER = "BirdsongFinder"   # nom de l'exe, du dossier et de l'archive
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 URL_SOURCES = "https://github.com/seb-naudet/birdsong-finder"
 
 # --- Textes du lanceur (la page a sa propre traduction) ---
@@ -37,8 +37,6 @@ TEXTES = {
     "fr": {
         "attente": "{nom} démarre… Le premier lancement peut prendre une "
                    "minute.",
-        "analyse": "Une analyse est en cours. Elle reprendra au prochain "
-                   "lancement. Quitter quand même ?",
         "port": "Le port {port} est déjà utilisé par un autre programme : "
                 "{nom} ne peut pas démarrer.",
         "erreur": "{nom} n'a pas pu démarrer.",
@@ -46,8 +44,6 @@ TEXTES = {
     },
     "en": {
         "attente": "{nom} is starting… The first start can take a minute.",
-        "analyse": "An analysis is in progress. It will resume next time "
-                   "you start the program. Quit anyway?",
         "port": "Port {port} is already used by another program: {nom} "
                 "cannot start.",
         "erreur": "{nom} could not start.",
@@ -56,8 +52,6 @@ TEXTES = {
     "de": {
         "attente": "{nom} startet… Der erste Start kann eine Minute "
                    "dauern.",
-        "analyse": "Eine Analyse läuft. Sie wird beim nächsten Start "
-                   "fortgesetzt. Trotzdem beenden?",
         "port": "Port {port} wird bereits von einem anderen Programm "
                 "benutzt: {nom} kann nicht starten.",
         "erreur": "{nom} konnte nicht starten.",
@@ -66,8 +60,6 @@ TEXTES = {
     "es": {
         "attente": "{nom} se está iniciando… El primer inicio puede tardar "
                    "un minuto.",
-        "analyse": "Hay un análisis en curso. Se reanudará en el próximo "
-                   "inicio. ¿Salir de todos modos?",
         "port": "El puerto {port} ya lo usa otro programa: {nom} no puede "
                 "iniciarse.",
         "erreur": "{nom} no ha podido iniciarse.",
@@ -76,8 +68,6 @@ TEXTES = {
     "it": {
         "attente": "{nom} si sta avviando… Il primo avvio può richiedere "
                    "un minuto.",
-        "analyse": "È in corso un'analisi. Riprenderà al prossimo avvio. "
-                   "Uscire comunque?",
         "port": "La porta {port} è già usata da un altro programma: {nom} "
                 "non può avviarsi.",
         "erreur": "{nom} non è riuscito ad avviarsi.",
@@ -230,7 +220,6 @@ def page_simple(titre, *paragraphes):
 def mode_fenetre(srv, url, journal):
     import webview
 
-    quitter_demande = threading.Event()
     fenetre = webview.create_window(
         NOM, html=page_simple(NOM, texte("attente")), width=1100, height=850,
         min_size=(640, 480), text_select=True)
@@ -255,7 +244,6 @@ def mode_fenetre(srv, url, journal):
         return choix[0] if choix else None
 
     def quitter():
-        quitter_demande.set()            # deja confirme dans la page
         fenetre.destroy()
 
     def montrer():
@@ -266,21 +254,10 @@ def mode_fenetre(srv, url, journal):
     srv.QUITTER = quitter
     srv.MONTRER = montrer
 
-    def fermeture():
-        """Croix, Alt+F4 : confirmation si une analyse tourne (renvoyer
-        False annule la fermeture)."""
-        if quitter_demande.is_set():
-            return True
-        with srv.verrou:
-            occupe = bool(srv.etat["en_cours"] or srv.file_attente)
-        if occupe and message(texte("analyse"),
-                              MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2,
-                              ma_fenetre()) != IDYES:
-            focus_page()
-            return False
-        return True
-
-    fenetre.events.closing += fermeture
+    # Croix, Alt+F4, bouton Quitter : AUCUNE confirmation, meme pendant une
+    # analyse (demande de l'auteur, 2026-11-24) : la fenetre se ferme tout de
+    # suite et l'analyse en cours est interrompue proprement juste apres
+    # (voir la fin de mode_fenetre) ; le fichier repart au prochain lancement.
 
     def demarrage():
         try:
@@ -299,6 +276,10 @@ def mode_fenetre(srv, url, journal):
     # des noms d'oiseaux, duree des extraits) d'un lancement a l'autre.
     webview.start(demarrage, private_mode=False,
                   storage_path=os.path.join(srv.DONNEES, "webview"))
+    # Fenetre fermee : on laisse a l'analyse en cours quelques secondes pour
+    # s'interrompre (ffmpeg tue, aucun sidecar partiel), puis le processus
+    # se termine.
+    srv.arreter_analyse()
 
 
 def main():

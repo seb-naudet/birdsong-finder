@@ -24,6 +24,9 @@
      mode navigation la fleche s'arretait sur la puce, pas sur le bouton,
      et la barre d'espace ne lancait rien) */
   .passages button { display: block; }
+  /* region aria-live invisible mais lue (annonces du direct) */
+  .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px;
+             overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -92,6 +95,13 @@ côté des fichiers audio.</p>
   <button id="btnAjoutDossier" data-i18n="btnAjout">Ajouter ce dossier</button>
   <span id="dosRetour" role="status"></span>
 </p>
+<p><button id="btnColler" data-i18n="btnColler">Coller dans audio les fichiers
+copiés dans l'Explorateur</button>
+  <span id="collerRetour" role="status"></span></p>
+<p data-i18n="collerAide">Dans l'Explorateur, copiez (Ctrl+C) ou coupez
+(Ctrl+X) des fichiers audio ou des dossiers, puis revenez ici et faites Ctrl+V,
+ou appuyez sur ce bouton : ils sont copiés (ou déplacés) dans le dossier audio,
+et leurs analyses déjà faites les suivent. Rien n'est remplacé.</p>
 
 <h2 data-i18n="hAffichage">Affichage</h2>
 <p>
@@ -113,15 +123,65 @@ côté des fichiers audio.</p>
     </select>
   </label>
 </p>
-
 <p>
-  <button id="btnStop" data-i18n="btnStop">Arrêter la lecture</button>
+  <label><span data-i18n="lblOrdre">Ordre des espèces et des passages</span>
+    <select id="selOrdre">
+      <option value="apparition" selected data-i18n="ordreApparition">dans l'ordre d'apparition</option>
+      <option value="plus_sur" data-i18n="ordrePlusSur">du plus sûr au moins sûr</option>
+      <option value="moins_sur" data-i18n="ordreMoinsSur">du moins sûr au plus sûr</option>
+    </select>
+  </label>
 </p>
+
+<p data-i18n="aideTouches">Espace sur un passage = écouter ;
+Ctrl+Espace = pause ou reprise ; Maj+Espace = arrêter.</p>
 <p id="lectureEtat" role="status"></p>
 
+<h2 data-i18n="hDirect">Direct</h2>
+<p data-i18n="directIntro">Analyse en continu d'une entrée audio de
+l'ordinateur : micro, interface, câble virtuel… Le nom d'une espèce peut
+arriver quelques secondes après son chant ; une espèce reste « en ce moment »
+40 secondes après sa dernière détection.</p>
+<p>
+  <label><span data-i18n="lblEntree">Entrée audio</span>
+    <select id="selEntree"></select></label>
+  <button id="btnEntrees" data-i18n="btnEntrees">Actualiser la liste des entrées</button>
+</p>
+<p><button id="btnDirect" data-i18n="btnDirectOn">Démarrer le direct</button>
+  <span id="directRetour" role="status"></span></p>
+<p><button id="btnMoniteur" aria-pressed="false" disabled
+     data-i18n="btnMoniteur">Écouter l'entrée audio (moniteur)</button>
+  <span id="moniteurNote"></span></p>
+<p>
+  <label><input type="checkbox" id="chkAnnonce">
+    <span data-i18n="lblAnnonce">Annoncer automatiquement chaque espèce
+entendue (lecteur d'écran)</span></label>
+</p>
+<p>
+  <label><input type="checkbox" id="chkFichier">
+    <span data-i18n="lblFichier">Écrire les espèces entendues dans un fichier
+texte</span></label>
+  <span id="fichierDirect"></span>
+</p>
+<p id="directEtat" data-i18n="dArrete">Direct arrêté.</p>
+<div id="directLive" class="sr-only" aria-live="polite"></div>
+<h3 data-i18n="hEntendues">Espèces entendues pendant ce direct</h3>
+<p id="directVide" data-i18n="directVide">Aucune pour le moment.</p>
+<ul id="listeDirect"></ul>
+
 <h2 id="titreListe" data-i18n="hListe">Enregistrements</h2>
-<p data-i18n="noteOrdre">Les espèces sont listées dans l'ordre où on les
-entend dans l'enregistrement, pas de la plus sûre à la moins sûre.</p>
+<p>
+  <label><span data-i18n="lblFiltre">Chercher des espèces (un ou plusieurs
+noms séparés par des virgules, vide = tout afficher)</span>
+    <input id="champFiltre" type="text" size="45"
+           autocomplete="off"></label>
+  <button id="btnFiltre" data-i18n="btnFiltre">Appliquer le filtre</button>
+  <button id="btnFiltreVider" data-i18n="btnFiltreVider">Effacer le filtre</button>
+</p>
+<p id="filtreRetour" role="status"></p>
+<p data-i18n="noteOrdre">Par défaut, les espèces et leurs passages sont
+listés dans l'ordre où on les entend dans l'enregistrement ; l'ordre se
+change dans la section Affichage.</p>
 <nav id="sommaire" hidden></nav>
 <div id="fichiers"><p data-i18n="chargement">Chargement…</p></div>
 
@@ -167,7 +227,6 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     eInjoignable: "Serveur injoignable.",
     eArrete: "BirdNET est arrêté. Tu peux fermer cet onglet.",
     confForce: "Tout réanalyser ? Les analyses existantes seront refaites.",
-    confQuit: "Arrêter BirdNET ? La fenêtre de console se fermera toute seule.",
     sommaireLabel: "Sommaire des enregistrements",
     sommaireAller: "Aller directement à un enregistrement :",
     aucunFichier: "Aucun fichier audio dans le dossier audio.",
@@ -181,6 +240,63 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnVoir: "Afficher les espèces", btnMasquer: "Masquer les espèces",
     btnReanalyser: "Réanalyser ce fichier",
     aucuneEspece: "Aucune espèce au-dessus du seuil choisi.",
+    lblFiltre: "Chercher des espèces (un ou plusieurs noms séparés par des virgules, vide = tout afficher)",
+    btnFiltre: "Appliquer le filtre",
+    btnFiltreVider: "Effacer le filtre",
+    filtreRien: "Filtre : aucun enregistrement ne contient les espèces cherchées (avec le seuil choisi).",
+    filtreOte: "Filtre effacé : tous les enregistrements sont affichés.",
+    collLecture: "Lecture du presse-papiers…",
+    collRien: "Le presse-papiers ne contient pas de fichiers : copiez-les d'abord dans l'Explorateur.",
+    collTrouves1: "1 élément trouvé, collage en cours…",
+    collTrouvesN: "{n} éléments trouvés, collage en cours…",
+    collProgression: "Collage en cours : {n} sur {m}…",
+    collFini: "Collage terminé : ",
+    collRienFait: "rien à faire",
+    collCopies1: "1 fichier copié",
+    collCopiesN: "{n} fichiers copiés",
+    collDeplaces1: "1 fichier déplacé",
+    collDeplacesN: "{n} fichiers déplacés",
+    collDeja1: "1 déjà présent, non remplacé",
+    collDejaN: "{n} déjà présents, non remplacés",
+    collSuivis1: "1 analyse suivie",
+    collSuivisN: "{n} analyses suivies",
+    collIgnores1: "1 élément ignoré",
+    collIgnoresN: "{n} éléments ignorés",
+    collDistant: "Le collage n'est possible que sur l'ordinateur où tourne le programme.",
+    monBloque: "Moniteur indisponible avec cette entrée : elle reprend ce que l'ordinateur joue, l'écouter ferait une boucle.",
+    monCoupe: "Moniteur coupé tout seul : l'entrée saturait depuis une seconde (boucle ?).",
+    btnDirectOn: "Démarrer le direct",
+    btnDirectOff: "Arrêter le direct",
+    dArrete: "Direct arrêté.",
+    dEnCours: "Direct en cours depuis {t} — {e} — {c}",
+    dErreur: "problème : ",
+    dSansAudio: " — aucun son reçu",
+    dNiveau: " — niveau {n} dB",
+    dFichier: "Fichier : {f}",
+    dMaintenant: "en ce moment",
+    dDerniere: "dernière fois à {t}",
+    dPremiere: "première fois à {t}",
+    nFois1: "1 fois",
+    nFoisN: "{n} fois",
+    dMax: "au mieux {p}",
+    dEntreeAucune: "Aucune entrée audio trouvée.",
+    dDemarrage: "Démarrage du direct…",
+    dDemarre: "Direct démarré.",
+    dStoppe: "Direct arrêté.",
+    lblOrdre: "Ordre des espèces et des passages",
+    ordre_apparition: "dans l'ordre d'apparition",
+    ordre_plus_sur: "du plus sûr au moins sûr",
+    ordre_moins_sur: "du moins sûr au plus sûr",
+    noteOrdre: "Par défaut, les espèces et leurs passages sont listés dans l'ordre où on les entend dans l'enregistrement ; l'ordre se change dans la section Affichage.",
+    filtreOrdre: ". Les autres enregistrements sont masqués.",
+    ordreApparition: "dans l'ordre d'apparition",
+    ordrePlusSur: "du plus sûr au moins sûr",
+    ordreMoinsSur: "du moins sûr au plus sûr",
+    filtre: "Filtre : ",
+    nEnreg1: "dans 1 enregistrement",
+    nEnregN: "dans {n} enregistrements",
+    surTotal: " sur {m}",
+    btnSuite: "Afficher les {n} passages suivants",
     faible: " (faible)", incertain: " (incertain)",
     confMax: "confiance max ",
     nPassages1: "1 passage", nPassagesN: "{n} passages",
@@ -191,11 +307,14 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     uMin: " min ", uS: " s",
     bloque: "Le navigateur a bloqué le son : presse une touche, par exemple Tab, et la lecture partira toute seule.",
     lectureImpossible: "Lecture impossible : ",
+    aideTouches: "Espace sur un passage = écouter ; Ctrl+Espace = pause ou reprise ; Maj+Espace = arrêter.",
+    lecturePause: "Pause",
     cfgOk: "Réglages enregistrés pour les prochaines analyses. Le bouton « Tout réanalyser » les applique aux fichiers déjà analysés.",
     erreur: "Erreur : ",
     dosPrincipal: " — dossier du projet, toujours surveillé",
     btnRetirer: "Ne plus surveiller ",
-    dosRetire: "Dossier retiré (ses fichiers et leurs analyses restent sur le disque).",
+    dosRetire: "Dossier retiré. Ses fichiers audio restent intacts ; ses résultats d'analyse seront supprimés au prochain lancement.",
+    dosAbsent: " — introuvable pour le moment (disque débranché ?), ses analyses sont conservées",
     dosAjoute: "Dossier ajouté : ses fichiers audio partent en analyse.",
     dosAnnule: "Choix annulé.",
     dosFenetre: "Fenêtre de choix ouverte sur le Bureau (faire Alt+Tab si elle n'est pas au premier plan)…",
@@ -203,7 +322,6 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     dosErr: "Erreur pendant le choix du dossier.",
     btnJournalAff: "Afficher le journal du serveur",
     btnJournalMasq: "Masquer le journal du serveur",
-    confQuitAppli: "Quitter l'application ?",
     aproposAppli: "{nom}, version {version}. Logiciel libre sous licence MIT."
   },
   en: {
@@ -234,7 +352,8 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     lblChemin: "Or paste a folder path", btnAjout: "Add this folder",
     dosPrincipal: " — project folder, always watched",
     btnRetirer: "Stop watching ",
-    dosRetire: "Folder removed (its files and their analyses stay on disk).",
+    dosRetire: "Folder removed. Its audio files are untouched; its analysis results will be deleted at the next start.",
+    dosAbsent: " — not found at the moment (disk unplugged?), its results are kept",
     dosAjoute: "Folder added: its audio files are queued for analysis.",
     dosAnnule: "Cancelled.",
     dosFenetre: "Folder picker opened on the desktop (press Alt+Tab if it is not in front)…",
@@ -243,14 +362,14 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     hAffichage: "Display", lblLangue: "Language of bird names",
     lblFaibles: "Also show weak detections (confidence below 25%)",
     lblDuree: "Length of the played excerpts",
+    aideTouches: "Space on a passage = play; Ctrl+Space = pause or resume; Shift+Space = stop.",
+    lecturePause: "Paused",
     sec3: "3 seconds (BirdNET window)", sec6: "6 seconds",
     sec10: "10 seconds", sec15: "15 seconds",
-    btnStop: "Stop playback",
     bloque: "The browser blocked the sound: press a key, Tab for example, and playback will start by itself.",
     lectureImpossible: "Playback failed: ",
     hListe: "Recordings", sommaireLabel: "Summary of recordings",
     sommaireAller: "Jump straight to a recording:",
-    noteOrdre: "Species are listed in the order they are heard in the recording, not from most to least confident.",
     aucunFichier: "No audio file in the audio folder.",
     nEsp1: "1 species", nEspN: "{n} species",
     nDet1: "1 detection", nDetN: "{n} detections",
@@ -262,6 +381,74 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnVoir: "Show species", btnMasquer: "Hide species",
     btnReanalyser: "Re-analyse this file",
     aucuneEspece: "No species above the chosen threshold.",
+    lblFiltre: "Search for species (one or more names separated by commas, empty = show everything)",
+    btnFiltre: "Apply filter",
+    btnFiltreVider: "Clear filter",
+    filtreRien: "Filter: no recording contains the species you are looking for (at the chosen threshold).",
+    filtreOte: "Filter cleared: all recordings are shown.",
+    btnColler: "Paste into audio the files copied in Explorer",
+    collerAide: "In Explorer, copy (Ctrl+C) or cut (Ctrl+X) audio files or folders, then come back here and press Ctrl+V, or this button: they are copied (or moved) into the audio folder, and their existing analyses follow them. Nothing is replaced.",
+    collLecture: "Reading the clipboard…",
+    collRien: "The clipboard holds no files: copy them in Explorer first.",
+    collTrouves1: "1 item found, pasting…",
+    collTrouvesN: "{n} items found, pasting…",
+    collProgression: "Pasting: {n} of {m}…",
+    collFini: "Paste finished: ",
+    collRienFait: "nothing to do",
+    collCopies1: "1 file copied",
+    collCopiesN: "{n} files copied",
+    collDeplaces1: "1 file moved",
+    collDeplacesN: "{n} files moved",
+    collDeja1: "1 already present, not replaced",
+    collDejaN: "{n} already present, not replaced",
+    collSuivis1: "1 analysis followed",
+    collSuivisN: "{n} analyses followed",
+    collIgnores1: "1 item ignored",
+    collIgnoresN: "{n} items ignored",
+    collDistant: "Pasting is only possible on the computer where the program runs.",
+    btnMoniteur: "Listen to the audio input (monitor)",
+    monBloque: "Monitor unavailable with this input: it carries what the computer plays, listening to it would create a feedback loop.",
+    monCoupe: "Monitor switched off by itself: the input had been saturating for a second (feedback loop?).",
+    hDirect: "Live",
+    directIntro: "Continuous analysis of an audio input of this computer: microphone, interface, virtual cable… A species name can arrive a few seconds after its song; a species stays “right now” for 40 seconds after its last detection.",
+    lblEntree: "Audio input",
+    btnEntrees: "Refresh the list of inputs",
+    btnDirectOn: "Start live analysis",
+    btnDirectOff: "Stop live analysis",
+    lblAnnonce: "Announce each species heard automatically (screen reader)",
+    lblFichier: "Write the species heard to a text file",
+    hEntendues: "Species heard during this live session",
+    directVide: "None yet.",
+    dArrete: "Live analysis stopped.",
+    dEnCours: "Live analysis running since {t} — {e} — {c}",
+    dErreur: "problem: ",
+    dSansAudio: " — no sound received",
+    dNiveau: " — level {n} dB",
+    dFichier: "File: {f}",
+    dMaintenant: "right now",
+    dDerniere: "last heard at {t}",
+    dPremiere: "first heard at {t}",
+    nFois1: "1 time",
+    nFoisN: "{n} times",
+    dMax: "best {p}",
+    dEntreeAucune: "No audio input found.",
+    dDemarrage: "Starting live analysis…",
+    dDemarre: "Live analysis started.",
+    dStoppe: "Live analysis stopped.",
+    lblOrdre: "Order of species and passages",
+    ordre_apparition: "in order of appearance",
+    ordre_plus_sur: "from most to least confident",
+    ordre_moins_sur: "from least to most confident",
+    noteOrdre: "By default, species and their passages are listed in the order they are heard in the recording; the order can be changed in the Display section.",
+    filtreOrdre: ". The other recordings are hidden.",
+    ordreApparition: "in order of appearance",
+    ordrePlusSur: "from most to least confident",
+    ordreMoinsSur: "from least to most confident",
+    filtre: "Filter: ",
+    nEnreg1: "in 1 recording",
+    nEnregN: "in {n} recordings",
+    surTotal: " out of {m}",
+    btnSuite: "Show the next {n} passages",
     faible: " (weak)", incertain: " (uncertain)",
     confMax: "max confidence ",
     nPassages1: "1 passage", nPassagesN: "{n} passages",
@@ -283,11 +470,9 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     eInjoignable: "Server unreachable.",
     eArrete: "BirdNET has stopped. You can close this tab.",
     confForce: "Re-analyse everything? Existing analyses will be redone.",
-    confQuit: "Stop BirdNET? The console window will close by itself.",
     btnJournalAff: "Show the server log",
     btnJournalMasq: "Hide the server log",
     hJournal: "Log",
-    confQuitAppli: "Quit the application?",
     hApropos: "About",
     aproposAppli: "{nom}, version {version}. Free software under the MIT licence.",
     aproposBirdnet: "Birds are identified by BirdNET (K. Lisa Yang Center for Conservation Bioacoustics at the Cornell Lab of Ornithology, and Chemnitz University of Technology). Its model is licensed CC BY-NC-SA 4.0: non-commercial use only.",
@@ -323,7 +508,8 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnAjout: "Diesen Ordner hinzufügen",
     dosPrincipal: " — Projektordner, immer überwacht",
     btnRetirer: "Nicht mehr überwachen: ",
-    dosRetire: "Ordner entfernt (seine Dateien und Analysen bleiben auf der Festplatte).",
+    dosRetire: "Ordner entfernt. Seine Audiodateien bleiben unberührt; seine Analyseergebnisse werden beim nächsten Start gelöscht.",
+    dosAbsent: " — zurzeit nicht gefunden (Laufwerk abgezogen?), seine Ergebnisse bleiben erhalten",
     dosAjoute: "Ordner hinzugefügt: seine Audiodateien werden analysiert.",
     dosAnnule: "Abgebrochen.",
     dosFenetre: "Ordnerdialog auf dem Desktop geöffnet (Alt+Tab, falls er nicht im Vordergrund ist)…",
@@ -332,14 +518,14 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     hAffichage: "Anzeige", lblLangue: "Sprache der Vogelnamen",
     lblFaibles: "Auch schwache Erkennungen anzeigen (Konfidenz unter 25 %)",
     lblDuree: "Länge der abgespielten Ausschnitte",
+    aideTouches: "Leertaste auf einer Passage = abspielen; Strg+Leertaste = Pause oder weiter; Umschalt+Leertaste = stoppen.",
+    lecturePause: "Pause",
     sec3: "3 Sekunden (BirdNET-Fenster)", sec6: "6 Sekunden",
     sec10: "10 Sekunden", sec15: "15 Sekunden",
-    btnStop: "Wiedergabe stoppen",
     bloque: "Der Browser hat den Ton blockiert: eine Taste drücken (z. B. Tab), die Wiedergabe startet dann von selbst.",
     lectureImpossible: "Wiedergabe nicht möglich: ",
     hListe: "Aufnahmen", sommaireLabel: "Übersicht der Aufnahmen",
     sommaireAller: "Direkt zu einer Aufnahme springen:",
-    noteOrdre: "Die Arten sind in der Reihenfolge aufgeführt, in der sie in der Aufnahme zu hören sind, nicht nach Konfidenz.",
     aucunFichier: "Keine Audiodatei im audio-Ordner.",
     nEsp1: "1 Art", nEspN: "{n} Arten",
     nDet1: "1 Erkennung", nDetN: "{n} Erkennungen",
@@ -351,6 +537,74 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnVoir: "Arten anzeigen", btnMasquer: "Arten ausblenden",
     btnReanalyser: "Diese Datei neu analysieren",
     aucuneEspece: "Keine Art über der gewählten Schwelle.",
+    lblFiltre: "Arten suchen (ein oder mehrere Namen, durch Kommas getrennt, leer = alles anzeigen)",
+    btnFiltre: "Filter anwenden",
+    btnFiltreVider: "Filter zurücksetzen",
+    filtreRien: "Filter: keine Aufnahme enthält die gesuchten Arten (bei der gewählten Schwelle).",
+    filtreOte: "Filter zurückgesetzt: alle Aufnahmen werden angezeigt.",
+    btnColler: "Im Explorer kopierte Dateien in audio einfügen",
+    collerAide: "Kopieren (Strg+C) oder schneiden Sie (Strg+X) im Explorer Audiodateien oder Ordner aus, kommen Sie hierher zurück und drücken Sie Strg+V oder diesen Knopf: sie werden in den Ordner audio kopiert (oder verschoben), und ihre vorhandenen Analysen folgen ihnen. Nichts wird ersetzt.",
+    collLecture: "Zwischenablage wird gelesen…",
+    collRien: "Die Zwischenablage enthält keine Dateien: kopieren Sie sie zuerst im Explorer.",
+    collTrouves1: "1 Element gefunden, wird eingefügt…",
+    collTrouvesN: "{n} Elemente gefunden, werden eingefügt…",
+    collProgression: "Einfügen: {n} von {m}…",
+    collFini: "Einfügen beendet: ",
+    collRienFait: "nichts zu tun",
+    collCopies1: "1 Datei kopiert",
+    collCopiesN: "{n} Dateien kopiert",
+    collDeplaces1: "1 Datei verschoben",
+    collDeplacesN: "{n} Dateien verschoben",
+    collDeja1: "1 bereits vorhanden, nicht ersetzt",
+    collDejaN: "{n} bereits vorhanden, nicht ersetzt",
+    collSuivis1: "1 Analyse übernommen",
+    collSuivisN: "{n} Analysen übernommen",
+    collIgnores1: "1 Element übersprungen",
+    collIgnoresN: "{n} Elemente übersprungen",
+    collDistant: "Einfügen ist nur auf dem Computer möglich, auf dem das Programm läuft.",
+    btnMoniteur: "Audioeingang abhören (Monitor)",
+    monBloque: "Monitor mit diesem Eingang nicht verfügbar: er führt, was der Computer wiedergibt; ihn abzuhören ergäbe eine Rückkopplungsschleife.",
+    monCoupe: "Monitor hat sich selbst abgeschaltet: der Eingang war eine Sekunde lang übersteuert (Rückkopplung?).",
+    hDirect: "Live",
+    directIntro: "Laufende Analyse eines Audioeingangs dieses Computers: Mikrofon, Interface, virtuelles Kabel… Ein Artname kann einige Sekunden nach dem Gesang eintreffen; eine Art bleibt 40 Sekunden nach ihrer letzten Erkennung „gerade jetzt“.",
+    lblEntree: "Audioeingang",
+    btnEntrees: "Liste der Eingänge aktualisieren",
+    btnDirectOn: "Live-Analyse starten",
+    btnDirectOff: "Live-Analyse beenden",
+    lblAnnonce: "Jede gehörte Art automatisch ansagen (Screenreader)",
+    lblFichier: "Gehörte Arten in eine Textdatei schreiben",
+    hEntendues: "Während dieser Live-Sitzung gehörte Arten",
+    directVide: "Noch keine.",
+    dArrete: "Live-Analyse beendet.",
+    dEnCours: "Live-Analyse läuft seit {t} — {e} — {c}",
+    dErreur: "Problem: ",
+    dSansAudio: " — kein Ton empfangen",
+    dNiveau: " — Pegel {n} dB",
+    dFichier: "Datei: {f}",
+    dMaintenant: "gerade jetzt",
+    dDerniere: "zuletzt um {t}",
+    dPremiere: "zuerst um {t}",
+    nFois1: "1 Mal",
+    nFoisN: "{n} Mal",
+    dMax: "bestenfalls {p}",
+    dEntreeAucune: "Kein Audioeingang gefunden.",
+    dDemarrage: "Live-Analyse startet…",
+    dDemarre: "Live-Analyse gestartet.",
+    dStoppe: "Live-Analyse beendet.",
+    lblOrdre: "Reihenfolge der Arten und Passagen",
+    ordre_apparition: "in der Reihenfolge des Auftretens",
+    ordre_plus_sur: "von der sichersten zur unsichersten",
+    ordre_moins_sur: "von der unsichersten zur sichersten",
+    noteOrdre: "Standardmäßig sind die Arten und ihre Passagen in der Reihenfolge aufgeführt, in der sie in der Aufnahme zu hören sind; die Reihenfolge lässt sich im Abschnitt Anzeige ändern.",
+    filtreOrdre: ". Die anderen Aufnahmen sind ausgeblendet.",
+    ordreApparition: "in der Reihenfolge des Auftretens",
+    ordrePlusSur: "von der sichersten zur unsichersten",
+    ordreMoinsSur: "von der unsichersten zur sichersten",
+    filtre: "Filter: ",
+    nEnreg1: "in 1 Aufnahme",
+    nEnregN: "in {n} Aufnahmen",
+    surTotal: " von {m}",
+    btnSuite: "Die nächsten {n} Passagen anzeigen",
     faible: " (schwach)", incertain: " (unsicher)",
     confMax: "max. Konfidenz ",
     nPassages1: "1 Passage", nPassagesN: "{n} Passagen",
@@ -372,11 +626,9 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     eInjoignable: "Server nicht erreichbar.",
     eArrete: "BirdNET ist beendet. Dieser Tab kann geschlossen werden.",
     confForce: "Alles neu analysieren? Vorhandene Analysen werden wiederholt.",
-    confQuit: "BirdNET beenden? Das Konsolenfenster schließt sich von selbst.",
     btnJournalAff: "Serverprotokoll anzeigen",
     btnJournalMasq: "Serverprotokoll ausblenden",
     hJournal: "Protokoll",
-    confQuitAppli: "Anwendung beenden?",
     hApropos: "Über",
     aproposAppli: "{nom}, Version {version}. Freie Software unter der MIT-Lizenz.",
     aproposBirdnet: "Die Vögel werden von BirdNET bestimmt (K. Lisa Yang Center for Conservation Bioacoustics am Cornell Lab of Ornithology und Technische Universität Chemnitz). Das Modell steht unter der Lizenz CC BY-NC-SA 4.0: nur nicht-kommerzielle Nutzung.",
@@ -412,7 +664,8 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnAjout: "Añadir esta carpeta",
     dosPrincipal: " — carpeta del proyecto, siempre vigilada",
     btnRetirer: "Dejar de vigilar ",
-    dosRetire: "Carpeta retirada (sus archivos y análisis quedan en el disco).",
+    dosRetire: "Carpeta quitada. Sus archivos de audio quedan intactos; sus resultados de análisis se borrarán en el próximo inicio.",
+    dosAbsent: " — no se encuentra por ahora (¿disco desconectado?), sus resultados se conservan",
     dosAjoute: "Carpeta añadida: sus archivos de audio pasan a analizarse.",
     dosAnnule: "Cancelado.",
     dosFenetre: "Cuadro de elección abierto en el escritorio (Alt+Tab si no está delante)…",
@@ -421,14 +674,14 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     hAffichage: "Visualización", lblLangue: "Idioma de los nombres de aves",
     lblFaibles: "Mostrar también las detecciones débiles (confianza inferior al 25 %)",
     lblDuree: "Duración de los extractos escuchados",
+    aideTouches: "Espacio en un pasaje = escuchar; Ctrl+Espacio = pausa o reanudar; Mayús+Espacio = detener.",
+    lecturePause: "Pausa",
     sec3: "3 segundos (ventana BirdNET)", sec6: "6 segundos",
     sec10: "10 segundos", sec15: "15 segundos",
-    btnStop: "Detener la lectura",
     bloque: "El navegador bloqueó el sonido: pulsa una tecla, por ejemplo Tab, y la lectura empezará sola.",
     lectureImpossible: "Lectura imposible: ",
     hListe: "Grabaciones", sommaireLabel: "Resumen de las grabaciones",
     sommaireAller: "Ir directamente a una grabación:",
-    noteOrdre: "Las especies se listan en el orden en que se oyen en la grabación, no de mayor a menor confianza.",
     aucunFichier: "Ningún archivo de audio en la carpeta audio.",
     nEsp1: "1 especie", nEspN: "{n} especies",
     nDet1: "1 detección", nDetN: "{n} detecciones",
@@ -440,6 +693,74 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnVoir: "Mostrar las especies", btnMasquer: "Ocultar las especies",
     btnReanalyser: "Reanalizar este archivo",
     aucuneEspece: "Ninguna especie por encima del umbral elegido.",
+    lblFiltre: "Buscar especies (uno o varios nombres separados por comas, vacío = mostrar todo)",
+    btnFiltre: "Aplicar el filtro",
+    btnFiltreVider: "Quitar el filtro",
+    filtreRien: "Filtro: ninguna grabación contiene las especies buscadas (con el umbral elegido).",
+    filtreOte: "Filtro quitado: se muestran todas las grabaciones.",
+    btnColler: "Pegar en audio los archivos copiados en el Explorador",
+    collerAide: "En el Explorador, copie (Ctrl+C) o corte (Ctrl+X) archivos de audio o carpetas, vuelva aquí y pulse Ctrl+V o este botón: se copian (o se mueven) a la carpeta audio, y sus análisis existentes los siguen. No se reemplaza nada.",
+    collLecture: "Leyendo el portapapeles…",
+    collRien: "El portapapeles no contiene archivos: cópielos primero en el Explorador.",
+    collTrouves1: "1 elemento encontrado, pegando…",
+    collTrouvesN: "{n} elementos encontrados, pegando…",
+    collProgression: "Pegando: {n} de {m}…",
+    collFini: "Pegado terminado: ",
+    collRienFait: "nada que hacer",
+    collCopies1: "1 archivo copiado",
+    collCopiesN: "{n} archivos copiados",
+    collDeplaces1: "1 archivo movido",
+    collDeplacesN: "{n} archivos movidos",
+    collDeja1: "1 ya presente, no reemplazado",
+    collDejaN: "{n} ya presentes, no reemplazados",
+    collSuivis1: "1 análisis conservado",
+    collSuivisN: "{n} análisis conservados",
+    collIgnores1: "1 elemento ignorado",
+    collIgnoresN: "{n} elementos ignorados",
+    collDistant: "Pegar solo es posible en el ordenador donde se ejecuta el programa.",
+    btnMoniteur: "Escuchar la entrada de audio (monitor)",
+    monBloque: "Monitor no disponible con esta entrada: lleva lo que reproduce el ordenador; escucharla crearía un bucle de realimentación.",
+    monCoupe: "Monitor apagado automáticamente: la entrada saturaba desde hace un segundo (¿bucle?).",
+    hDirect: "En directo",
+    directIntro: "Análisis continuo de una entrada de audio de este ordenador: micrófono, interfaz, cable virtual… El nombre de una especie puede llegar unos segundos después de su canto; una especie sigue «ahora mismo» durante 40 segundos tras su última detección.",
+    lblEntree: "Entrada de audio",
+    btnEntrees: "Actualizar la lista de entradas",
+    btnDirectOn: "Iniciar el directo",
+    btnDirectOff: "Detener el directo",
+    lblAnnonce: "Anunciar automáticamente cada especie oída (lector de pantalla)",
+    lblFichier: "Escribir las especies oídas en un archivo de texto",
+    hEntendues: "Especies oídas durante este directo",
+    directVide: "Ninguna por ahora.",
+    dArrete: "Directo detenido.",
+    dEnCours: "Directo en curso desde {t} — {e} — {c}",
+    dErreur: "problema: ",
+    dSansAudio: " — no se recibe sonido",
+    dNiveau: " — nivel {n} dB",
+    dFichier: "Archivo: {f}",
+    dMaintenant: "ahora mismo",
+    dDerniere: "última vez a las {t}",
+    dPremiere: "primera vez a las {t}",
+    nFois1: "1 vez",
+    nFoisN: "{n} veces",
+    dMax: "máximo {p}",
+    dEntreeAucune: "No se encontró ninguna entrada de audio.",
+    dDemarrage: "Iniciando el directo…",
+    dDemarre: "Directo iniciado.",
+    dStoppe: "Directo detenido.",
+    lblOrdre: "Orden de las especies y los pasajes",
+    ordre_apparition: "en orden de aparición",
+    ordre_plus_sur: "de la más segura a la menos segura",
+    ordre_moins_sur: "de la menos segura a la más segura",
+    noteOrdre: "Por defecto, las especies y sus pasajes se listan en el orden en que se oyen en la grabación; el orden se cambia en la sección Visualización.",
+    filtreOrdre: ". Las demás grabaciones están ocultas.",
+    ordreApparition: "en orden de aparición",
+    ordrePlusSur: "de la más segura a la menos segura",
+    ordreMoinsSur: "de la menos segura a la más segura",
+    filtre: "Filtro: ",
+    nEnreg1: "en 1 grabación",
+    nEnregN: "en {n} grabaciones",
+    surTotal: " de {m}",
+    btnSuite: "Mostrar los {n} pasajes siguientes",
     faible: " (débil)", incertain: " (incierto)",
     confMax: "confianza máx. ",
     nPassages1: "1 pasaje", nPassagesN: "{n} pasajes",
@@ -461,11 +782,9 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     eInjoignable: "Servidor inaccesible.",
     eArrete: "BirdNET está detenido. Puedes cerrar esta pestaña.",
     confForce: "¿Reanalizar todo? Los análisis existentes se rehacerán.",
-    confQuit: "¿Detener BirdNET? La ventana de consola se cerrará sola.",
     btnJournalAff: "Mostrar el registro del servidor",
     btnJournalMasq: "Ocultar el registro del servidor",
     hJournal: "Registro",
-    confQuitAppli: "¿Salir de la aplicación?",
     hApropos: "Acerca de",
     aproposAppli: "{nom}, versión {version}. Software libre con licencia MIT.",
     aproposBirdnet: "Las aves las identifica BirdNET (K. Lisa Yang Center for Conservation Bioacoustics del Cornell Lab of Ornithology, y Universidad Tecnológica de Chemnitz). Su modelo tiene licencia CC BY-NC-SA 4.0: solo uso no comercial.",
@@ -501,7 +820,8 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnAjout: "Aggiungi questa cartella",
     dosPrincipal: " — cartella del progetto, sempre sorvegliata",
     btnRetirer: "Non sorvegliare più ",
-    dosRetire: "Cartella rimossa (i suoi file e le analisi restano sul disco).",
+    dosRetire: "Cartella rimossa. I suoi file audio restano intatti; i suoi risultati di analisi saranno eliminati al prossimo avvio.",
+    dosAbsent: " — al momento introvabile (disco scollegato?), i suoi risultati sono conservati",
     dosAjoute: "Cartella aggiunta: i suoi file audio vanno in analisi.",
     dosAnnule: "Annullato.",
     dosFenetre: "Finestra di scelta aperta sul desktop (Alt+Tab se non è in primo piano)…",
@@ -510,14 +830,14 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     hAffichage: "Visualizzazione", lblLangue: "Lingua dei nomi degli uccelli",
     lblFaibles: "Mostra anche i rilevamenti deboli (confidenza sotto il 25 %)",
     lblDuree: "Durata degli estratti ascoltati",
+    aideTouches: "Spazio su un passaggio = ascolta; Ctrl+Spazio = pausa o riprendi; Maiusc+Spazio = ferma.",
+    lecturePause: "Pausa",
     sec3: "3 secondi (finestra BirdNET)", sec6: "6 secondi",
     sec10: "10 secondi", sec15: "15 secondi",
-    btnStop: "Ferma la riproduzione",
     bloque: "Il browser ha bloccato il suono: premi un tasto, per esempio Tab, e la riproduzione partirà da sola.",
     lectureImpossible: "Riproduzione impossibile: ",
     hListe: "Registrazioni", sommaireLabel: "Sommario delle registrazioni",
     sommaireAller: "Vai direttamente a una registrazione:",
-    noteOrdre: "Le specie sono elencate nell'ordine in cui si sentono nella registrazione, non dalla più alla meno sicura.",
     aucunFichier: "Nessun file audio nella cartella audio.",
     nEsp1: "1 specie", nEspN: "{n} specie",
     nDet1: "1 rilevamento", nDetN: "{n} rilevamenti",
@@ -529,6 +849,74 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     btnVoir: "Mostra le specie", btnMasquer: "Nascondi le specie",
     btnReanalyser: "Rianalizza questo file",
     aucuneEspece: "Nessuna specie sopra la soglia scelta.",
+    lblFiltre: "Cerca specie (uno o più nomi separati da virgole, vuoto = mostra tutto)",
+    btnFiltre: "Applica il filtro",
+    btnFiltreVider: "Togli il filtro",
+    filtreRien: "Filtro: nessuna registrazione contiene le specie cercate (con la soglia scelta).",
+    filtreOte: "Filtro tolto: tutte le registrazioni sono visualizzate.",
+    btnColler: "Incolla in audio i file copiati in Esplora file",
+    collerAide: "In Esplora file, copia (Ctrl+C) o taglia (Ctrl+X) file audio o cartelle, poi torna qui e premi Ctrl+V o questo pulsante: vengono copiati (o spostati) nella cartella audio, e le loro analisi esistenti li seguono. Nulla viene sostituito.",
+    collLecture: "Lettura degli appunti…",
+    collRien: "Gli appunti non contengono file: copiali prima in Esplora file.",
+    collTrouves1: "1 elemento trovato, incollo…",
+    collTrouvesN: "{n} elementi trovati, incollo…",
+    collProgression: "Incollo: {n} di {m}…",
+    collFini: "Incolla terminato: ",
+    collRienFait: "niente da fare",
+    collCopies1: "1 file copiato",
+    collCopiesN: "{n} file copiati",
+    collDeplaces1: "1 file spostato",
+    collDeplacesN: "{n} file spostati",
+    collDeja1: "1 già presente, non sostituito",
+    collDejaN: "{n} già presenti, non sostituiti",
+    collSuivis1: "1 analisi conservata",
+    collSuivisN: "{n} analisi conservate",
+    collIgnores1: "1 elemento ignorato",
+    collIgnoresN: "{n} elementi ignorati",
+    collDistant: "Incollare è possibile solo sul computer dove gira il programma.",
+    btnMoniteur: "Ascolta l'ingresso audio (monitor)",
+    monBloque: "Monitor non disponibile con questo ingresso: porta ciò che il computer riproduce; ascoltarlo creerebbe un anello di retroazione.",
+    monCoupe: "Monitor spento da solo: l'ingresso era saturo da un secondo (anello di retroazione?).",
+    hDirect: "In diretta",
+    directIntro: "Analisi continua di un ingresso audio di questo computer: microfono, interfaccia, cavo virtuale… Il nome di una specie può arrivare qualche secondo dopo il suo canto; una specie resta «in questo momento» per 40 secondi dopo l'ultimo rilevamento.",
+    lblEntree: "Ingresso audio",
+    btnEntrees: "Aggiorna l'elenco degli ingressi",
+    btnDirectOn: "Avvia la diretta",
+    btnDirectOff: "Ferma la diretta",
+    lblAnnonce: "Annuncia automaticamente ogni specie sentita (screen reader)",
+    lblFichier: "Scrivi le specie sentite in un file di testo",
+    hEntendues: "Specie sentite durante questa diretta",
+    directVide: "Nessuna per ora.",
+    dArrete: "Diretta ferma.",
+    dEnCours: "Diretta in corso dalle {t} — {e} — {c}",
+    dErreur: "problema: ",
+    dSansAudio: " — nessun suono ricevuto",
+    dNiveau: " — livello {n} dB",
+    dFichier: "File: {f}",
+    dMaintenant: "in questo momento",
+    dDerniere: "ultima volta alle {t}",
+    dPremiere: "prima volta alle {t}",
+    nFois1: "1 volta",
+    nFoisN: "{n} volte",
+    dMax: "al massimo {p}",
+    dEntreeAucune: "Nessun ingresso audio trovato.",
+    dDemarrage: "Avvio della diretta…",
+    dDemarre: "Diretta avviata.",
+    dStoppe: "Diretta ferma.",
+    lblOrdre: "Ordine delle specie e dei passaggi",
+    ordre_apparition: "in ordine di apparizione",
+    ordre_plus_sur: "dalla più sicura alla meno sicura",
+    ordre_moins_sur: "dalla meno sicura alla più sicura",
+    noteOrdre: "Per impostazione predefinita, le specie e i loro passaggi sono elencati nell'ordine in cui si sentono nella registrazione; l'ordine si cambia nella sezione Visualizzazione.",
+    filtreOrdre: ". Le altre registrazioni sono nascoste.",
+    ordreApparition: "in ordine di apparizione",
+    ordrePlusSur: "dalla più sicura alla meno sicura",
+    ordreMoinsSur: "dalla meno sicura alla più sicura",
+    filtre: "Filtro: ",
+    nEnreg1: "in 1 registrazione",
+    nEnregN: "in {n} registrazioni",
+    surTotal: " su {m}",
+    btnSuite: "Mostra i {n} passaggi successivi",
     faible: " (debole)", incertain: " (incerto)",
     confMax: "confidenza max ",
     nPassages1: "1 passaggio", nPassagesN: "{n} passaggi",
@@ -550,11 +938,9 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     eInjoignable: "Server irraggiungibile.",
     eArrete: "BirdNET è fermo. Puoi chiudere questa scheda.",
     confForce: "Rianalizzare tutto? Le analisi esistenti saranno rifatte.",
-    confQuit: "Fermare BirdNET? La finestra della console si chiuderà da sola.",
     btnJournalAff: "Mostra il registro del server",
     btnJournalMasq: "Nascondi il registro del server",
     hJournal: "Registro",
-    confQuitAppli: "Chiudere l'applicazione?",
     hApropos: "Informazioni",
     aproposAppli: "{nom}, versione {version}. Software libero con licenza MIT.",
     aproposBirdnet: "Gli uccelli sono identificati da BirdNET (K. Lisa Yang Center for Conservation Bioacoustics del Cornell Lab of Ornithology e Università Tecnica di Chemnitz). Il suo modello è sotto licenza CC BY-NC-SA 4.0: solo uso non commerciale.",
@@ -671,7 +1057,47 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
       try { sourceCour.stop(); } catch (e) {}
       sourceCour = null;
     }
+    $("lectureEtat").textContent = "";
   }
+
+  // Ctrl+Espace : pause / reprise (serveur MCI, ou contexte Web Audio
+  // suspendu / repris en secours). "Pause" est annonce dans le role=status.
+  function pauseLecture() {
+    if (lectureServeur) {
+      postJSON("/api/pause", {}).then(function (rep) {
+        $("lectureEtat").textContent =
+          rep && rep.etat === "pause" ? t("lecturePause") : "";
+      }).catch(function () {});
+    } else if (sourceCour && ctxAudio) {
+      if (ctxAudio.state === "running") {
+        ctxAudio.suspend();
+        $("lectureEtat").textContent = t("lecturePause");
+      } else {
+        ctxAudio.resume();
+        $("lectureEtat").textContent = "";
+      }
+    }
+  }
+
+  /* Raccourcis de lecture (demande de l'auteur, 2026-11-24, a la place du
+     bouton Arreter) : Ctrl+Espace = pause/reprise, Maj+Espace = arret.
+     Espace seul reste "rejouer" sur le bouton du passage. Pas dans un champ
+     de saisie (Maj+Espace y tape une espace). En capture : avant le
+     navigateur (Maj+Espace = page precedente dans Chrome). */
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== " " && e.key !== "Spacebar") { return; }
+    var cible = e.target && e.target.tagName;
+    if (cible === "INPUT" || cible === "TEXTAREA" || cible === "SELECT") {
+      return;
+    }
+    if (e.ctrlKey && !e.shiftKey && !e.altKey) {
+      e.preventDefault(); e.stopPropagation();
+      pauseLecture();
+    } else if (e.shiftKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault(); e.stopPropagation();
+      arreterLecture();
+    }
+  }, true);
 
   function jouer(rel, debut, duree) {
     if (lectureServeur) {
@@ -741,6 +1167,19 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
      (sinon un oiseau qui chante 30 s donne 10 boutons). Un oiseau qui revient
      plus tard donne bien une occurrence de plus. */
   var TOL_FUSION = 1.5;         // trou tolere entre deux fenetres (secondes)
+
+  /* Ordre d'affichage (section Affichage, memorise) : apparition = par
+     debut, plus_sur / moins_sur = par confiance (egalite : par debut).
+     Vaut pour les especes d'un enregistrement, leurs passages, et les
+     passages de la vue de recherche (demande de l'auteur, 2026-11-24). */
+  function ordre() { return $("selOrdre").value || "apparition"; }
+
+  function comparer(a, b) {
+    var o = ordre();
+    if (o === "plus_sur" && a.conf !== b.conf) { return b.conf - a.conf; }
+    if (o === "moins_sur" && a.conf !== b.conf) { return a.conf - b.conf; }
+    return a.debut - b.debut;
+  }
 
   function fusionner(dets) {
     var occ = [], cour = null;
@@ -816,6 +1255,7 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
       if (nErr) { txt += " " + tn("eErreurs", nErr); }
       $("etat").textContent = txt;
       $("journal").textContent = e.journal.join("\n");
+      majCollage(e.collage);
     }).catch(function () {
       $("etat").textContent = t("eInjoignable");
     });
@@ -855,6 +1295,40 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     var e = especes && especes[sci];
     if (e) { return e.fr || e.en || sci; }
     return sci;
+  }
+
+  // --- Filtre par nom d'espece (champ sous "Enregistrements") ---
+  // Comparaison sans accents ni majuscules, sur le nom affiche (langue
+  // choisie) ET le nom scientifique ; plusieurs noms separes par des
+  // virgules (ou points-virgules) = l'un OU l'autre. Memorise localStorage.
+  function normaliser(s) {
+    s = String(s || "").toLowerCase();
+    try { s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+    catch (e) {}
+    return s.replace(/\s+/g, " ").trim();
+  }
+
+  function termesFiltre() {
+    return $("champFiltre").value.split(/[,;]/).map(normaliser)
+      .filter(function (x) { return x; });
+  }
+
+  function correspond(termes, sci, nom) {
+    if (!termes.length) { return true; }
+    var n = normaliser(nom), c = normaliser(sci);
+    return termes.some(function (tm) {
+      return n.indexOf(tm) >= 0 || c.indexOf(tm) >= 0;
+    });
+  }
+
+  // Especes d'un fichier (resume /api/fichiers : sci -> confiance max) qui
+  // passent le seuil ET le filtre, dans la langue choisie.
+  function especesTrouvees(f, termes, seuil) {
+    var confs = f.especes || {};
+    return Object.keys(confs).filter(function (sci) {
+      return confs[sci] >= seuil &&
+             correspond(termes, sci, nomEspece(sci, null));
+    }).map(function (sci) { return nomEspece(sci, null); });
   }
 
   // --- Reglages d'analyse (lieu, saison) et dossiers surveilles ---
@@ -923,7 +1397,7 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
       $("cfgAuto").checked = c.date_mode !== "fixe";
       $("cfgJour").value = c.jour;
       $("cfgMois").value = c.mois;
-      afficherDossiers(c.dossiers || []);
+      afficherDossiers(c.dossiers || [], c.dossiers_absents || []);
       // Programme portable (exe) : son nom, sa version, ses sources.
       appli = c.appli || null;
       if (appli) {
@@ -940,7 +1414,8 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     });
   }
 
-  function afficherDossiers(ds) {
+  function afficherDossiers(ds, absents) {
+    absents = absents || [];
     var ul = $("listeDossiers");
     ul.innerHTML = "";
     var li0 = document.createElement("li");
@@ -949,12 +1424,13 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     ul.appendChild(li0);
     ds.forEach(function (d) {
       var li = document.createElement("li");
-      li.textContent = d + " ";
+      li.textContent = d + (absents.indexOf(d) >= 0 ? t("dosAbsent") : "") +
+                       " ";
       var b = document.createElement("button");
       b.textContent = t("btnRetirer") + d;
       b.addEventListener("click", function () {
         postJSON("/api/dossiers", { retirer: d }).then(function (r) {
-          afficherDossiers(r.dossiers || []);
+          afficherDossiers(r.dossiers || [], r.dossiers_absents || []);
           $("dosRetour").textContent = t("dosRetire");
           rafraichirFichiers();
         });
@@ -986,6 +1462,31 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
         var pv = document.createElement("p");
         pv.textContent = t("aucunFichier");
         zone.appendChild(pv);
+        return;
+      }
+      // Filtre d'especes actif : la liste laisse place a la vue de
+      // recherche (un titre par espece cherchee, ses passages de TOUS les
+      // enregistrements du plus sur au moins sur, a ecouter directement).
+      var termes = termesFiltre();
+      if (termes.length) {
+        var seuil = $("chkFaibles").checked ? 0 : 0.25;
+        var total = liste.length;
+        var retenus = liste.filter(function (f) {
+          return f.statut === "analyse" &&
+                 especesTrouvees(f, termes, seuil).length > 0;
+        });
+        $("sommaire").hidden = true;
+        if (!retenus.length) {
+          $("filtreRetour").textContent = t("filtreRien");
+          var pf = document.createElement("p");
+          pf.textContent = t("filtreRien");
+          zone.appendChild(pf);
+          return;
+        }
+        var pa = document.createElement("p");
+        pa.textContent = t("chargement");
+        zone.appendChild(pa);
+        afficherRecherche(retenus, termes, seuil, total);
         return;
       }
       var nav = $("sommaire");
@@ -1071,6 +1572,110 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     });
   }
 
+  // --- Vue de recherche (filtre d'especes actif) ---
+  // Un h3 par espece trouvee, puis ses passages de tous les enregistrements
+  // retenus, du plus sur au moins sur, chacun un bouton d'ecoute qui nomme
+  // le fichier. Les passages sont servis par lots (LOT) : un moineau sur
+  // vingt fichiers ferait sinon des centaines de boutons d'un coup.
+  var LOT = 100;
+  function afficherRecherche(fichiers, termes, seuil, total) {
+    var zone = $("fichiers");
+    var cle = termes.join(",");
+    Promise.all(fichiers.map(function (f) {
+      return getJSON("/api/oiseaux?f=" + encodeURIComponent(f.f))
+        .then(function (sc) { return { f: f, sc: sc }; },
+              function () { return { f: f, sc: null }; });
+    })).then(function (resultats) {
+      // le filtre a change pendant le chargement : cette reponse est perimee
+      if (termesFiltre().join(",") !== cle) { return; }
+      var parEspece = {};
+      resultats.forEach(function (r, idx) {
+        if (!r.sc || r.sc.erreur) { return; }
+        var dets = {};
+        (r.sc.detections || []).forEach(function (d) {
+          if (d.conf < seuil) { return; }
+          (dets[d.sci] = dets[d.sci] || []).push(d);
+        });
+        var dureeFichier = r.sc.duree || r.f.duree || 0;
+        Object.keys(dets).forEach(function (sci) {
+          var nom = nomEspece(sci, r.sc.especes);
+          if (!correspond(termes, sci, nom)) { return; }
+          var e = parEspece[sci] = parEspece[sci] ||
+            { nom: nom, passages: [], fichiers: {} };
+          e.fichiers[r.f.f] = true;
+          fusionner(dets[sci]).forEach(function (o) {
+            e.passages.push({ o: o, rel: r.f.f, duree: dureeFichier,
+                              conf: o.conf, debut: idx * 1e7 + o.debut });
+          });
+        });
+      });
+      zone.innerHTML = "";
+      var scis = Object.keys(parEspece).sort(function (a, b) {
+        return parEspece[a].nom.localeCompare(parEspece[b].nom);
+      });
+      if (!scis.length) {
+        $("filtreRetour").textContent = t("filtreRien");
+        var pf = document.createElement("p");
+        pf.textContent = t("filtreRien");
+        zone.appendChild(pf);
+        return;
+      }
+      var nbPassages = 0, fichiersVus = {};
+      scis.forEach(function (sci) {
+        var e = parEspece[sci];
+        e.passages.sort(comparer);
+        nbPassages += e.passages.length;
+        Object.keys(e.fichiers).forEach(function (f) { fichiersVus[f] = 1; });
+        var h = document.createElement("h3");
+        h.textContent = e.nom + " — " + tn("nPassages", e.passages.length) +
+          " " + tn("nEnreg", Object.keys(e.fichiers).length);
+        zone.appendChild(h);
+        var div = document.createElement("div");
+        div.className = "passages";
+        zone.appendChild(div);
+        ajouterLot(div, e, 0);
+      });
+      $("filtreRetour").textContent = t("filtre") + tn("nEsp", scis.length) +
+        ", " + tn("nPassages", nbPassages) + " " +
+        tn("nEnreg", Object.keys(fichiersVus).length) +
+        tf("surTotal", { m: total }) + ", " + t("ordre_" + ordre()) +
+        t("filtreOrdre");
+    });
+  }
+
+  function ajouterLot(div, e, debut) {
+    e.passages.slice(debut, debut + LOT).forEach(function (p) {
+      var o = p.o;
+      var b = document.createElement("button");
+      var etiq = [t("ecouter") + e.nom, p.rel, t("aT") + mmss(o.t),
+                  pct(o.conf)];
+      if (o.fin - o.debut > 4) {
+        etiq.push(t("chantDe") + mmss(o.fin - o.debut));
+      }
+      var po = posDominante(o.pos);
+      if (po) { etiq.push(po); }
+      b.textContent = etiq.join(" — ");
+      b.addEventListener("click", function () {
+        var w = fenetre(o, p.duree);
+        jouer(p.rel, w.debut, w.duree);
+      });
+      div.appendChild(b);
+    });
+    var reste = e.passages.length - debut - LOT;
+    if (reste > 0) {
+      var plus = document.createElement("button");
+      plus.textContent = tf("btnSuite", { n: Math.min(reste, LOT) });
+      plus.addEventListener("click", function () {
+        div.removeChild(plus);
+        ajouterLot(div, e, debut + LOT);
+        // NVDA : le focus va sur le premier bouton ajoute
+        var boutons = div.querySelectorAll("button");
+        if (boutons[debut + LOT]) { boutons[debut + LOT].focus(); }
+      });
+      div.appendChild(plus);
+    }
+  }
+
   // --- Detail des especes d'un enregistrement ---
   function afficherEspeces(f, zone) {
     var rel = f.f;
@@ -1103,12 +1708,11 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
             pos[p] = (pos[p] || 0) + o.pos[p];
           });
         });
-        return { sci: sci, occ: occ, conf: conf, pos: pos };
-      }).sort(function (a, b) {
-        // ordre d'APPARITION dans l'enregistrement (premier passage),
-        // pas par confiance : la page suit le deroulement de l'audio
-        return a.occ[0].debut - b.occ[0].debut;
-      });
+        // premier / dernier passage : bornes chronologiques, quel que soit
+        // l'ordre d'affichage choisi ensuite
+        return { sci: sci, occ: occ, conf: conf, pos: pos,
+                 debut: occ[0].debut, fin: occ[occ.length - 1].fin };
+      }).sort(comparer);
 
       especes.forEach(function (e) {
         var nom = nomEspece(e.sci, sc.especes);
@@ -1123,8 +1727,7 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
         p.className = "resume";
         var bouts = [t("confMax") + pct(e.conf),
                      tn("nPassages", e.occ.length),
-                     tf("deA", { a: mmss(e.occ[0].debut),
-                                 b: mmss(e.occ[e.occ.length - 1].fin) })];
+                     tf("deA", { a: mmss(e.debut), b: mmss(e.fin) })];
         var pd = posDominante(e.pos);
         if (pd) { bouts.push(pd); }
         p.textContent = bouts.join(", ");
@@ -1135,7 +1738,7 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
            ne lancait pas la lecture (retour utilisateur 2026-09). */
         var div = document.createElement("div");
         div.className = "passages";
-        e.occ.forEach(function (o) {
+        e.occ.slice().sort(comparer).forEach(function (o) {
           var b = document.createElement("button");
           var etiq = [t("ecouter") + nom, t("aT") + mmss(o.t), pct(o.conf)];
           if (o.fin - o.debut > 4) {
@@ -1154,6 +1757,322 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
       });
     });
   }
+
+  // --- Coller des fichiers copies dans l'Explorateur (Ctrl+V ou bouton) ---
+  // C'est le SERVEUR qui lit le presse-papiers de Windows (une page web ne
+  // recoit pas les fichiers copies dans l'Explorateur, jamais les dossiers) :
+  // possible seulement quand la page tourne sur la machine du serveur.
+  var collageVu = null;      // "fini" du dernier collage affiche
+  var suiviCollage = null;
+
+  function coller() {
+    if (!lectureServeur) {
+      $("collerRetour").textContent = t("collDistant");
+      return;
+    }
+    $("collerRetour").textContent = t("collLecture");
+    postJSON("/api/coller", {}).then(function (r) {
+      if (r.erreur) {
+        $("collerRetour").textContent = t("erreur") + r.erreur;
+      } else if (!r.trouves) {
+        $("collerRetour").textContent = t("collRien");
+      } else {
+        $("collerRetour").textContent = tn("collTrouves", r.trouves);
+        rafraichirEtat();
+      }
+    }).catch(function (e) {
+      $("collerRetour").textContent = t("erreur") + e.message;
+    });
+  }
+
+  function majCollage(c) {
+    if (!c) { return; }
+    if (c.en_cours) {
+      $("collerRetour").textContent =
+        tf("collProgression", { n: c.faits, m: c.total });
+      if (!suiviCollage) {          // suivi plus serre pendant la copie
+        suiviCollage = setTimeout(function () {
+          suiviCollage = null;
+          rafraichirEtat();
+        }, 1000);
+      }
+      return;
+    }
+    if (collageVu === null) {       // page ouverte : rien a dire du passe
+      collageVu = c.fini;
+      return;
+    }
+    if (c.fini && c.fini !== collageVu) {
+      collageVu = c.fini;
+      var bouts = [];
+      if (c.copies) { bouts.push(tn("collCopies", c.copies)); }
+      if (c.deplaces) { bouts.push(tn("collDeplaces", c.deplaces)); }
+      if (c.deja) { bouts.push(tn("collDeja", c.deja)); }
+      if (c.suivis) { bouts.push(tn("collSuivis", c.suivis)); }
+      if (c.ignores) { bouts.push(tn("collIgnores", c.ignores)); }
+      var txt = t("collFini") +
+        (bouts.length ? bouts.join(", ") : t("collRienFait")) + ".";
+      if (c.erreur) { txt += " " + t("erreur") + c.erreur; }
+      $("collerRetour").textContent = txt;
+      rafraichirFichiers();
+    }
+  }
+
+  $("btnColler").addEventListener("click", coller);
+  // Ctrl+V hors d'un champ de saisie = coller les fichiers
+  document.addEventListener("keydown", function (e) {
+    if ((e.key === "v" || e.key === "V") && e.ctrlKey && !e.shiftKey &&
+        !e.altKey) {
+      var cible = e.target && e.target.tagName;
+      if (cible === "INPUT" || cible === "TEXTAREA" || cible === "SELECT") {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      coller();
+    }
+  }, true);
+
+  // --- Direct : analyse en continu d'une entree audio ---------------------
+  // Le serveur decide les EVENEMENTS (arrivee d'une espece, confirmation
+  // incertain -> sur ; regles du direct du VPS) ; la page les dit dans une
+  // region aria-live polite invisible si la case "annoncer" est cochee (meme
+  // principe que birds.js du VPS : region minimale videe apres 10 s, liste
+  // SANS aria-live). La liste des especes entendues ne fait que grandir et
+  // chaque ligne est mise a jour SUR PLACE : le lecteur d'ecran garde sa
+  // position pendant qu'on la parcourt.
+  var LIVE_EFFACE_MS = 10000;
+  var directActif = false;
+  var directVuId = null;        // dernier evenement dit (null = pas encore cale)
+  var directDepuisVu = -1;      // nouveau direct -> liste videe
+  var effaceurLive = null;
+
+  function heure(t) {
+    try {
+      return new Date(t * 1000).toLocaleTimeString(navigator.language,
+        { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    } catch (e) {
+      return new Date(t * 1000).toLocaleTimeString();
+    }
+  }
+
+  function chargerEntrees() {
+    var sel = $("selEntree");
+    return getJSON("/api/direct/entrees").then(function (r) {
+      if (r.erreur) { throw new Error(r.erreur); }
+      sel.innerHTML = "";
+      (r.entrees || []).forEach(function (e) {
+        var o = document.createElement("option");
+        o.value = e.id;
+        o.textContent = e.nom;
+        o.setAttribute("data-loopback", e.loopback ? "1" : "0");
+        sel.appendChild(o);
+      });
+      if (r.choisie) { sel.value = r.choisie; }
+      if (!sel.options.length) {
+        $("directRetour").textContent = t("dEntreeAucune");
+      }
+      majMoniteur();
+    }).catch(function (e) {
+      $("directRetour").textContent = t("erreur") + e.message;
+    });
+  }
+
+  function texteEspece(sci, especes, sur, pos) {
+    var x = nomEspece(sci, especes) + (sur ? "" : t("incertain"));
+    if (pos && POS_CODES.indexOf(pos) >= 0) { x += " — " + t("pos" + pos); }
+    return x;
+  }
+
+  function annoncerDirect(textes) {
+    if (!textes.length || !$("chkAnnonce").checked) { return; }
+    var z = $("directLive");
+    z.textContent = textes.join(", ");
+    if (effaceurLive) { clearTimeout(effaceurLive); }
+    // vider plus tard est silencieux (aria-relevant = additions) et permet
+    // de redire le meme nom bien plus tard
+    effaceurLive = setTimeout(function () { z.textContent = ""; },
+                              LIVE_EFFACE_MS);
+  }
+
+  /* Moniteur de l'entree (bouton a bascule aria-pressed, OFF par defaut a
+     chaque demarrage) : utilisable seulement pendant le direct, et JAMAIS
+     avec une entree de type mixage stereo (elle reprend ce que l'ordinateur
+     joue : le moniteur s'entendrait lui-meme, de plus en plus fort). Le
+     serveur le coupe aussi tout seul si l'entree sature une seconde. */
+  var dernierDirect = null;
+
+  function entreeChoisieLoopback() {
+    var sel = $("selEntree");
+    var o = sel.options[sel.selectedIndex];
+    return !!(o && o.getAttribute("data-loopback") === "1");
+  }
+
+  function majMoniteur(d) {
+    d = d || dernierDirect || {};
+    var bloque = d.actif ? !!d.moniteur_bloque : entreeChoisieLoopback();
+    var b = $("btnMoniteur");
+    b.disabled = !d.actif || bloque;
+    var presse = d.actif && d.moniteur ? "true" : "false";
+    if (b.getAttribute("aria-pressed") !== presse) {
+      b.setAttribute("aria-pressed", presse);
+    }
+    var note = bloque ? t("monBloque")
+      : d.moniteur_message === "niveau" ? t("monCoupe")
+      : d.moniteur_message ? t("erreur") + d.moniteur_message : "";
+    if ($("moniteurNote").textContent !== note) {
+      $("moniteurNote").textContent = note;
+    }
+  }
+
+  function rendreDirect(d) {
+    dernierDirect = d;
+    directActif = !!d.actif;
+    majMoniteur(d);
+    var btn = t(d.actif ? "btnDirectOff" : "btnDirectOn");
+    if ($("btnDirect").textContent !== btn) { $("btnDirect").textContent = btn; }
+    var etat;
+    if (d.actif) {
+      etat = tf("dEnCours", { t: heure(d.depuis), e: d.entree,
+                              c: tn("nCanaux", d.canaux) });
+      if (d.erreur) {
+        etat += " — " + t("dErreur") + d.erreur;
+      } else if (!d.audio_ok) {
+        etat += t("dSansAudio");
+      } else if (d.niveau_db !== null && d.niveau_db !== undefined) {
+        etat += tf("dNiveau", { n: Math.round(d.niveau_db) });
+      }
+    } else {
+      etat = t("dArrete");
+    }
+    if ($("directEtat").textContent !== etat) {
+      $("directEtat").textContent = etat;
+    }
+    if ($("chkFichier").checked !== !!d.fichier) {
+      $("chkFichier").checked = !!d.fichier;
+    }
+    var cf = d.fichier && d.chemin_fichier
+      ? tf("dFichier", { f: d.chemin_fichier }) : "";
+    if ($("fichierDirect").textContent !== cf) {
+      $("fichierDirect").textContent = cf;
+    }
+
+    var ul = $("listeDirect");
+    if (d.depuis !== directDepuisVu) {       // nouveau direct (ou arret)
+      directDepuisVu = d.depuis;
+      if (d.actif) { ul.innerHTML = ""; }
+      directVuId = null;
+    }
+    var hist = d.historique || {};
+    var scis = Object.keys(hist).sort(function (a, b) {
+      return hist[a].premiere - hist[b].premiere;
+    });
+    var enPlace = {};
+    Array.prototype.forEach.call(ul.querySelectorAll("li[data-sci]"),
+      function (li) { enPlace[li.getAttribute("data-sci")] = li; });
+    scis.forEach(function (sci) {
+      var h = hist[sci], pr = (d.presences || {})[sci];
+      var bouts = [nomEspece(sci, d.especes)];
+      if (pr) {
+        bouts.push(t("dMaintenant") + (pr.sur ? "" : t("incertain")) +
+          (pr.pos && POS_CODES.indexOf(pr.pos) >= 0
+            ? " — " + t("pos" + pr.pos) : ""));
+      } else {
+        bouts.push(tf("dDerniere", { t: heure(h.derniere) }));
+      }
+      bouts.push(tn("nFois", h.n));
+      bouts.push(tf("dPremiere", { t: heure(h.premiere) }));
+      bouts.push(tf("dMax", { p: pct(h.conf_max) }));
+      var texte = bouts.join(" — ");
+      var li = enPlace[sci];
+      if (!li) {
+        li = document.createElement("li");
+        li.setAttribute("data-sci", sci);
+        ul.appendChild(li);
+      }
+      if (li.textContent !== texte) { li.textContent = texte; }
+    });
+    var vide = !ul.querySelector("li");
+    if ($("directVide").hidden === vide) { $("directVide").hidden = !vide; }
+
+    // Annonces : les evenements pas encore dits. Au premier passage (page
+    // ouverte sur un direct deja lance) on se cale sans rien dire.
+    var evs = d.evenements || [];
+    if (directVuId === null) {
+      directVuId = evs.length ? evs[evs.length - 1].id : 0;
+      return;
+    }
+    var textes = [];
+    evs.forEach(function (ev) {
+      if (ev.id > directVuId) {
+        directVuId = ev.id;
+        textes.push(texteEspece(ev.sci, d.especes, ev.sur, ev.pos));
+      }
+    });
+    annoncerDirect(textes);
+  }
+
+  function rafraichirDirect() {
+    if (serveurArrete) { return; }
+    getJSON("/api/direct/etat").then(rendreDirect).catch(function () {});
+  }
+
+  $("btnEntrees").addEventListener("click", function () {
+    $("directRetour").textContent = "";
+    chargerEntrees();
+  });
+  $("btnDirect").addEventListener("click", function () {
+    $("directRetour").textContent = "";
+    if (directActif) {
+      postJSON("/api/direct/arreter", {}).then(function () {
+        $("directRetour").textContent = t("dStoppe");
+        rafraichirDirect();
+      }).catch(function (e) {
+        $("directRetour").textContent = t("erreur") + e.message;
+      });
+      return;
+    }
+    var sel = $("selEntree");
+    if (!sel.value) {
+      $("directRetour").textContent = t("dEntreeAucune");
+      return;
+    }
+    $("directRetour").textContent = t("dDemarrage");
+    postJSON("/api/direct/demarrer", {
+      entree: sel.value, nom: sel.options[sel.selectedIndex].textContent,
+      lang: langue || "fr"
+    }).then(function (r) {
+      $("directRetour").textContent = r.ok
+        ? t("dDemarre") : t("erreur") + (r.erreur || "?");
+      rafraichirDirect();
+    }).catch(function (e) {
+      $("directRetour").textContent = t("erreur") + e.message;
+    });
+  });
+  $("selEntree").addEventListener("change", function () { majMoniteur(); });
+  $("btnMoniteur").addEventListener("click", function () {
+    var actif = $("btnMoniteur").getAttribute("aria-pressed") !== "true";
+    postJSON("/api/direct/moniteur", { actif: actif }).then(function (r) {
+      if (r.erreur) { $("directRetour").textContent = t("erreur") + r.erreur; }
+      rafraichirDirect();
+    }).catch(function (e) {
+      $("directRetour").textContent = t("erreur") + e.message;
+    });
+  });
+  $("chkAnnonce").checked = localStorage.getItem("birdnet.annonce") === "1";
+  $("chkAnnonce").addEventListener("change", function () {
+    localStorage.setItem("birdnet.annonce", this.checked ? "1" : "0");
+    if (!this.checked) { $("directLive").textContent = ""; }
+  });
+  $("chkFichier").addEventListener("change", function () {
+    postJSON("/api/direct/fichier", { actif: this.checked }).then(function (r) {
+      $("fichierDirect").textContent = r.actif
+        ? tf("dFichier", { f: r.chemin }) : "";
+    }).catch(function () {});
+  });
+  chargerEntrees();
+  rafraichirDirect();
+  setInterval(rafraichirDirect, 2000);
 
   // --- Branchements ---
   $("btnScan").addEventListener("click", function () {
@@ -1178,13 +2097,41 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
     chargerLabels().then(rafraichirFichiers);
   });
   $("chkFaibles").addEventListener("change", rafraichirFichiers);
-  $("btnStop").addEventListener("click", arreterLecture);
-  $("btnQuitter").addEventListener("click", function () {
-    // Dans la fenetre du programme, pas de console : texte adapte, et la
-    // fenetre se ferme d'elle-meme.
-    if (!confirm(t(appli && appli.fenetre ? "confQuitAppli" : "confQuit"))) {
-      return;
+  // Filtre d'especes : applique sur Entree, sur le bouton ou quand on quitte
+  // le champ (change) — pas a chaque frappe, pour ne pas reconstruire la
+  // liste (et parler dans le role=status) pendant qu'on tape.
+  $("champFiltre").value = localStorage.getItem("birdnet.filtre") || "";
+  var filtreApplique = $("champFiltre").value;
+  function appliquerFiltre(force) {
+    var v = $("champFiltre").value;
+    // Entree puis sortie du champ : le "change" qui suit ne doit pas
+    // reconstruire la liste une 2e fois (un panneau ouvert disparaitrait).
+    if (!force && v === filtreApplique) { return; }
+    filtreApplique = v;
+    localStorage.setItem("birdnet.filtre", v);
+    if (!termesFiltre().length) {
+      $("filtreRetour").textContent = t("filtreOte");
     }
+    rafraichirFichiers();
+  }
+  $("champFiltre").addEventListener("change", function () {
+    appliquerFiltre(false);
+  });
+  $("champFiltre").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); appliquerFiltre(true); }
+  });
+  $("btnFiltre").addEventListener("click", function () {
+    appliquerFiltre(true);
+  });
+  $("btnFiltreVider").addEventListener("click", function () {
+    $("champFiltre").value = "";
+    appliquerFiltre();
+    $("champFiltre").focus();
+  });
+  $("btnQuitter").addEventListener("click", function () {
+    // Aucune confirmation, meme pendant une analyse (demande de l'auteur,
+    // 2026-11-24) : le serveur interrompt l'analyse proprement et le fichier
+    // repart au prochain lancement.
     serveurArrete = true;
     postJSON("/api/quitter", {}).catch(function () {});
     $("etat").textContent = t("eArrete");
@@ -1200,6 +2147,12 @@ rel="noopener" data-i18n="lienSources">Code source et nouvelles versions
   });
   var duree0 = localStorage.getItem("birdnet.duree");
   if (duree0) { $("selDuree").value = duree0; }
+  var ordre0 = localStorage.getItem("birdnet.ordre");
+  if (ordre0) { $("selOrdre").value = ordre0; }
+  $("selOrdre").addEventListener("change", function () {
+    localStorage.setItem("birdnet.ordre", this.value);
+    rafraichirFichiers();
+  });
   $("selDuree").addEventListener("change", function () {
     localStorage.setItem("birdnet.duree", this.value);
   });
